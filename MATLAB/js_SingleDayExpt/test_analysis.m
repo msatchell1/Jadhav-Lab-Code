@@ -126,13 +126,37 @@ plot(traj1(:,1), traj1(:,5))
 %% Plotting for LFP data
 
 S_eeg = eeg{1,1}{1,3}{1,30};
-time_range = eeg_struct.starttime:(1/eeg_struct.samprate):eeg_struct.endtime;
+time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+S_eegref = eegref{1,1}{1,3}{1,30};
+S_delta = delta{1,1}{1,3}{1,30};
+S_theta = theta{1,1}{1,3}{1,30};
+S_ripple = ripple{1,1}{1,3}{1,30};
+S_gamma = gamma{1,1}{1,3}{1,30};
+
+
+% figure;
+% hold on;
+% title("Raw LFP Trace")
+% ylabel("Voltage (mV)??")
+% xlabel("Time (s)")
+% plot(time_range,S_eeg.data)
+
 
 figure;
 hold on;
-title("Raw LFP Trace")
-ylabel("Voltage (mV)??")
+title("Some LFP Traces Together")
 xlabel("Time (s)")
-plot(time_range,eeg_struct.data)
+plot(time_range, S_eeg.data, DisplayName='eeg')
+plot(time_range, S_eegref.data, DisplayName='eegref')
+plot(time_range, S_delta.data(:,1),DisplayName='delta')
+legend();
 
-
+figure;
+hold on;
+title("Filtered LFP Traces")
+xlabel("Time (ms)")
+plot(time_range, S_delta.data(:,1),DisplayName='delta')
+plot(time_range, S_gamma.data(:,1),DisplayName='gamma')
+plot(time_range, S_ripple.data(:,1),DisplayName='ripple')
+plot(time_range, S_theta.data(:,1),DisplayName='theta')
+legend()
