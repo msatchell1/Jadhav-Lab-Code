@@ -322,17 +322,6 @@ hold on;
 title('Epoch 3 PFC Cells')
 for i = 1:length(S_e3spikes)
     if S_e3spikes(i).tag == 'PFC'
-        scatter(S_e3spikes(i).data(:,1), ones(size(S_e3spikes(i).data(:,1)))*i,".")
+        scatter(S_e3spikes(i).data(:,1)), ones(size(S_e3spikes(i).data(:,1))*i,".")
     end
 end
-
-subplot(2,2,3)
-hold on;
-title('Epoch 3 CA1 Cells')
-for i = 1:length(S_e3spikes)
-    if S_e3spikes(i).tag == 'CA1'
-        scatter(S_e3spikes(i).data(:,1), ones(size(S_e3spikes(i).data(:,1)))*i,".")
-    end
-end
-
-
