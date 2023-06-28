@@ -17,8 +17,8 @@
 % Day / Epoch(17) / Tetrode / Cell 
 
 % There are 17 epochs, with 8 W track behavior sessions and 9 sleep
-% sessions. Most animals have 32 tetrodes, although I think at least one
-% has 64 tetrodes.
+% sessions. Every odd epoch is a sleep epoch. Most animals have 32 tetrodes,
+% although I think at least one has 64 tetrodes.
 
 
 % Each animal has an EEG folder which inside contains a ton of files. These
@@ -106,6 +106,15 @@
 % factor 'voltage_scaling'. To get back to mV, simply divide the amplitude
 % by this factor. Column 2 holds instantaneous phase (in radians) multipled
 % by 10,000. Column 3 holds the filter envelope magnitude.
+%
+% spikes:
+% day / epoch / tetrode / cell
+% 'data' holds the spiking data for that cell. Each row represents one
+% spike for that cell. Column 1 is the time of that spike, column 2 the
+% x-position, column 3 the y-position, column 4 (??), column 5 is unused,
+% column 6 is the largest amplitude of the spike measured by any of the
+% four electrodes on the tetrode, column 7 is the 
+
 
 
 %% Load data
@@ -227,4 +236,79 @@ xlabel("Time (ms)")
 plot(time_range, S_eeg.data, DisplayName='raw LFP')
 plot(time_range, S_ripple.data(:,1),DisplayName='ripple')
 legend()
+
+
+
+%% Cell Spiking Data
+
+data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+load_rats = {'BG1_direct'}; % Which rats to load data from
+filetype = {'spikes', 'cellinfo'}; % File type to load for each rat. All files will 
+% be loaded that contain filetype in the file name. Use 'eeg01' when you
+% want all the LFP files, otherwise eegref will also be included.
+
+for i=1:length(load_rats)
+
+    for k = 1:length(filetype)
+
+        File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(k)+"*");
+        filenames = {File_dir.name};
+        for j = 1:length(File_dir)
+            load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
+        end
+
+    end
+
+end
+
+
+% Grab data from epoch 3 (second sleep epoch), second tetrode, second cell
+S_spikes = spikes{1,1}{1,3}{1,2}{1,2};
+spikedata = S_spikes.data;
+
+S_cell = cellinfo{1,1}{1,3}{1,2}{1,2};
+
+figure;
+hold on;
+scatter(spikedata(:,1),zeros(size(spikedata(:,1))),'red', ".") %, spikedata(:,6))
+
+%% Now say I want to make a raster plot of all cells in an epoch on an animal
+
+e3spikes = spikes{1,1}{1,3};
+e3spikes_unpacked = [e3spikes{:}];
+S_e3spikes = [e3spikes_unpacked{:}];
+
+e3info = cellinfo{1,1}{1,3};
+e3info_unpacked_all = [e3info{:}];
+
+infodataexist = [];
+% Some of the structs don't have complete fields with data. To remove
+% these, I will only retain structs that have the 'meanrate' field.
+for i = 1:length(e3info_unpacked_all)
+    infodataexist(i) = isfield(e3info_unpacked_all{i}, 'meanrate');
+end
+
+infodataexist = logical(infodataexist); % For some reason the values in the array are double 
+% and not logical, even though isfield returns logical...
+e3info_unpacked = e3info_unpacked_all(infodataexist);
+% Removing the structs with no data makes the number of cells we have
+% meaningful info on equal to the number of cellswith spike data. So
+% cellinfo seemms to only be included in a given epoch when there are
+% spikes during that epoch. 
+
+S_e3info = [e3info_unpacked{:}];
+
+
+figure;
+
+subplot(2,2,1)
+hold on;
+title("Epoch 3 Raster All Cells")
+for i=1:length(S_e3spikes)
+    scatter(S_e3spikes(i).data(:,1), ones(size(S_e3spikes(i).data(:,1)))*i, ".")
+end
+
+subplot(2,2,2)
+hold on;
+title('Epoch 3 PFC Cells')
 
