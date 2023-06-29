@@ -13,8 +13,8 @@
 % task. Both of these animals do not have _direct files for them, meaning
 % that the preprocessing of the data has not been done. 
 
-% The format for most of the data files is supposedly as follows:
-% Day / Epoch(17) / Tetrode / Cell 
+% The format for most of the data files is as follows:
+% Day / Epoch / Tetrode / Cell 
 
 % There are 17 epochs, with 8 W track behavior sessions and 9 sleep
 % sessions. Every odd epoch is a sleep epoch. Most animals have 32 tetrodes,
@@ -86,7 +86,14 @@
 % assumed to be asleep and entered into SWS. If the theta/delta ratio goes
 % above a certain threshold then REM sleep is said to be occuring.
 % rem - start and end times of REM sleep.
-% spikes - Contains spike information for each cell. 
+% spikes - Contains spike information for each cell. The column each neuron
+% sits in under a tetrode in spikes matches that in cellinfo. And the cell
+% identity is conserved across epochs.
+% rippletime - contains start and end times for fully processed ripples. These are ripples
+% that have been collapsed across the multiple ripple-detecting tetrodes in
+% the CA1 pyramidal layer. This also excludes some ripple events based
+% on rat velocity. Note the rippletime file is missing for some animals.
+
 
 % More detailed information on the format of specific file types is as
 % follows:
@@ -94,6 +101,8 @@
 %
 % linfields:
 % day / epoch / tetrode / cell / trajectory
+% There are four columns here representing the four W-track trajectories.
+% Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
 % Under each trajectory is the place field data for that cell on that
 % trajectory. Column 1 is the distance in cm along that linearized
 % trajectory. Column 5 contains the occupancy normalized smooth firing field.
@@ -111,9 +120,27 @@
 % day / epoch / tetrode / cell
 % 'data' holds the spiking data for that cell. Each row represents one
 % spike for that cell. Column 1 is the time of that spike, column 2 the
-% x-position, column 3 the y-position, column 4 (??), column 5 is unused,
+% 2D x-position at the time of the spike, column 3 the 2D y-position, 
+% column 4 is the animal's head direction in radians, column 5 is unused,
 % column 6 is the largest amplitude of the spike measured by any of the
-% four electrodes on the tetrode, column 7 is the 
+% four electrodes on the tetrode, column 7 is the linearized position
+% index.
+%
+% cellinfo:
+% day / epoch / tetrode / cell
+% 'meanrate' is mean firing rate of that cell during that epoch.
+% 'numspikes' is number of spikes during that epoch. 'csi' is the complex
+% spike index, which shows how much the amplitude of spikes attenuates during 
+% a burst. 'propbursts' are the proportion of spikes that are in bursts, with 
+% bursts defined as spikes with < 6ms ISIs.
+% Some cells during some epochs have all but the 'tag2' field missing, with this
+% field containing 'Undef'...
+% Justin says these are cells that have clusters in other epochs (by
+% clusters he means being identifiable as a cell in mountainsort or
+% matclust). In fact, he says that in CA1 there is a large shift in the
+% population of active cells between wake and sleep, such that many cells
+% are only active during waking epochs and others only during sleep. 
+
 
 
 
@@ -133,7 +160,6 @@ for i=1:length(load_rats)
     for k = 1:length(filetype)
 
         File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(k)+"*");
-        filenames = {File_dir.name};
         for j = 1:length(File_dir)
             load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
         end
@@ -241,18 +267,14 @@ legend()
 
 %% Cell Spiking Data
 
-data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'BG1_direct'}; % Which rats to load data from
-filetype = {'spikes', 'cellinfo'}; % File type to load for each rat. All files will 
-% be loaded that contain filetype in the file name. Use 'eeg01' when you
-% want all the LFP files, otherwise eegref will also be included.
+filetype = {'spikes', 'cellinfo'};
 
 for i=1:length(load_rats)
 
     for k = 1:length(filetype)
 
         File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(k)+"*");
-        filenames = {File_dir.name};
         for j = 1:length(File_dir)
             load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
         end
@@ -262,17 +284,19 @@ for i=1:length(load_rats)
 end
 
 
-% Grab data from epoch 3 (second sleep epoch), second tetrode, second cell
-S_spikes = spikes{1,1}{1,3}{1,2}{1,2};
-spikedata = S_spikes.data;
-
-S_cell = cellinfo{1,1}{1,3}{1,2}{1,2};
+% % Grab data from epoch 3 (second sleep epoch), second tetrode, second cell
+% S_spikes = spikes{1,1}{1,3}{1,2}{1,2};
+% spikedata = S_spikes.data;
+% 
+% S_cell = cellinfo{1,1}{1,3}{1,2}{1,2};
 
 % figure;
 % hold on;
 % scatter(spikedata(:,1),zeros(size(spikedata(:,1))),'red', ".") %, spikedata(:,6))
 
-%% Now say I want to make a raster plot of all cells in an epoch on an animal
+
+
+% Now say I want to make a raster plot of all cells in an epoch on an animal
 
 e3spikes = spikes{1,1}{1,3};
 e3spikes_unpacked = [e3spikes{:}];
@@ -334,5 +358,179 @@ for i = 1:length(S_e3spikes)
         scatter(S_e3spikes(i).data(:,1), ones(size(S_e3spikes(i).data(:,1)))*i,".")
     end
 end
+
+
+
+%% Looking at sleep states and LFP
+
+% Decide what epoch and tetrode to look at. Must be odd numbered epoch for
+% sleep.
+epoch_ch = '11';
+tetrode_ch = '25';
+eeg_filetype = append('eeg01-',epoch_ch,'-',tetrode_ch);
+
+load_rats = {'BG1_direct'}; % Which rats to load data from
+filetype = {'ripples','sleep','rem','sws',eeg_filetype};
+
+for i=1:length(load_rats)
+
+    for k = 1:length(filetype)
+
+        File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(k)+"*");
+        for j = 1:length(File_dir)
+            load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
+        end
+
+    end
+
+end
+
+% Extract proper epoch data
+epoch_dbl = str2double(epoch_ch);
+tetrode_dbl = str2double(tetrode_ch);
+S_eeg = eeg{1,1}{1,epoch_dbl}{1,tetrode_dbl};
+time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+S_sleep = sleep{1,1}{1,epoch_dbl};
+S_sws = sws{1,1}{1,epoch_dbl};
+S_rem = rem{1,1}{1,epoch_dbl};
+S_ripples = ripples{1,1}{1,epoch_dbl}{1,tetrode_dbl};
+
+
+figure;
+hold on;
+title(sprintf("Sleep States | Epoch %d, Tet %d", epoch_dbl, tetrode_dbl))
+plot(time_range, S_eeg.data)
+
+sleep_labels = {};
+for i = 1:length(S_sleep.starttime)
+    x_vertices = [S_sleep.starttime(i),S_sleep.endtime(i),S_sleep.endtime(i),S_sleep.starttime(i)];
+    y_vertices = [min(S_eeg.data),min(S_eeg.data),max(S_eeg.data),max(S_eeg.data)];
+    patch(x_vertices, y_vertices, 'blue','FaceAlpha', 0.1, 'EdgeColor','none')
+
+    if i == 1
+        sleep_labels{i} = "sleep";
+    else
+        sleep_labels{i} = "";
+    end
+end
+
+sws_labels = {};
+for i = 1:length(S_sws.starttime)
+    x_vertices = [S_sws.starttime(i),S_sws.endtime(i),S_sws.endtime(i),S_sws.starttime(i)];
+    y_vertices = [min(S_eeg.data),min(S_eeg.data),max(S_eeg.data),max(S_eeg.data)];
+    patch(x_vertices, y_vertices, 'green','FaceAlpha', 0.3, 'EdgeColor','none')
+
+    if i == 1
+        sws_labels{i} = "sws";
+    else
+        sws_labels{i} = "";
+    end
+end
+
+rem_labels = {};
+for i = 1:length(S_rem.starttime)
+    x_vertices = [S_rem.starttime(i),S_rem.endtime(i),S_rem.endtime(i),S_rem.starttime(i)];
+    y_vertices = [min(S_eeg.data),min(S_eeg.data),max(S_eeg.data),max(S_eeg.data)];
+    patch(x_vertices, y_vertices, [0.8500 0.3250 0.0980],'FaceAlpha', 0.6, 'EdgeColor','none')
+
+    if i == 1
+        rem_labels{i} = "rem";
+    else
+        rem_labels{i} = "";
+    end
+end
+
+ripple_labels = {};
+for i = 1:length(S_ripples.starttime)
+    x_vertices = [S_ripples.starttime(i),S_ripples.endtime(i),S_ripples.endtime(i),S_ripples.starttime(i)];
+    y_vertices = [min(S_eeg.data),min(S_eeg.data),max(S_eeg.data),max(S_eeg.data)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.6, 'EdgeColor','none')
+
+    if i == 1
+        ripple_labels{i} = "ripples";
+    else
+        ripple_labels{i} = "";
+    end
+end
+
+legend({"LFP", sleep_labels{:}, sws_labels{:}, rem_labels{:}, ripple_labels{:}})
+
+
+%% Comparing LFP across tetrodes
+
+% I want to look into ripples, but first I want to make sure that I am okay
+% just referencing the LFP from a single tetrode. (Maybe I should just use
+% the reference electrode for looking at LFP?)
+
+load_rats = {'JS13_direct'}; % Which rats to load data from
+filetype = {'eeg01-05'};
+
+C_allfiles = {};
+
+for i=1:length(load_rats)
+
+        File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(1)+"*");
+        for j = 1:length(File_dir)
+            S_file = load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
+            C_file = struct2cell(S_file);
+            C_file = C_file{:}; % Remove extra cell outer layer
+            C_allfiles(j) = C_file;
+        end
+
+end
+
+% load information about the tetrodes
+
+
+% So now looking at the LFP data on each tetrode for one epoch:
+
+
+% figure;
+% hold on;
+% title("LFP on All Tetrodes for one Epoch")
+% for i = 1:length(C_allfiles)
+%     S_eeg = C_allfiles{1,i}{1,5}{1,i};
+%     time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+%     plot(time_range,S_eeg.data+1000*(i-1))
+% 
+% end
+
+
+figure;
+subplot(1,2,1)
+hold on;
+title("CA1 Tetrode LFP")
+plotcount = 0;
+for i = 1:length(C_allfiles)
+    S_eeg = C_allfiles{1,i}{1,5}{1,i};
+    if tetinfo{1,1}{1,5}{1,i}.area == 'CA1'
+        time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+        plot(time_range,S_eeg.data+1000*plotcount)
+        plotcount = plotcount + 1;
+    end
+end
+
+subplot(1,2,2)
+hold on;
+title("PFC Tetrode LFP")
+plotcount = 0;
+for i = 1:length(C_allfiles)
+    S_eeg = C_allfiles{1,i}{1,5}{1,i};
+    if tetinfo{1,1}{1,5}{1,i}.area == 'PFC'
+        time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+        plot(time_range,S_eeg.data+1000*plotcount)
+        plotcount = plotcount + 1;
+    end
+end
+
+%%
+
+figure;
+hold on;
+S_eeg = C_allfiles{1,3}{1,5}{1,3};
+time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
+plot(time_range,S_eeg.data)
+
+
 
 
