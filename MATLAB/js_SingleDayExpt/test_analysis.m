@@ -7,7 +7,9 @@
 %% Notes on data format and content
 
 % The good animals to do data analysis on are: BG1, ER1_NEW, JS
-% 12,13,14,15,17,21,34, KC10, KL8, and ZT2.
+% 14,15,17,21,34, KL8, and ZT2. ZT2 is the 64-tetrode animal.
+% Animals KC10, JS12, and JS13 either didn't behave as well for the task or
+% didn't have good place cells.
 
 % JS20 does not have many cells but behaved well. KC1 did not learn the
 % task. Both of these animals do not have _direct files for them, meaning
@@ -17,8 +19,8 @@
 % Day / Epoch / Tetrode / Cell 
 
 % There are 17 epochs, with 8 W track behavior sessions and 9 sleep
-% sessions. Every odd epoch is a sleep epoch. Most animals have 32 tetrodes,
-% although I think at least one has 64 tetrodes.
+% sessions. Every odd epoch is a sleep epoch. All animals have 32 tetrodes,
+% except for ZT2 which has 64.
 
 
 % Each animal has an EEG folder which inside contains a ton of files. These
@@ -143,6 +145,13 @@
 
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+
+%% Notes on missing data
+
+% JS14:
+% eeg01-03-22 is missing
+% rippletime is missing
+
 
 
 %% Load data
@@ -473,7 +482,7 @@ eeg_filetype = append('eeg01-',e_ch);
 
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
-load_rats = {'JS13_direct'}; % Which rats to load data from
+load_rats = {'JS15_direct'}; % Which rats to load data from
 filetype = {eeg_filetype};
 
 C_allfiles = {};
@@ -481,6 +490,7 @@ C_allfiles = {};
 for i=1:length(load_rats)
 
         File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(1)+"*");
+        fprintf("Number of %s files loaded: %d \n",filetype{1},length(File_dir))
         for j = 1:length(File_dir)
             S_file = load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
             C_file = struct2cell(S_file);
@@ -509,14 +519,18 @@ load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
 
 
 figure;
-sgtitle(sprintf("Epoch %d",e_dbl))
+sgtitle(sprintf("Animal %s Epoch %d",string(load_rats{:}),e_dbl), 'Interpreter', 'none')
 subplot(1,2,1)
 hold on;
 title("CA1 Tetrode LFP")
 plotcount = 0;
 for i = 1:length(C_allfiles)
-    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,i};
-    if tetinfo{1,1}{1,e_dbl}{1,i}.area == 'CA1'
+    % If an eeg file is missing then C_allfiles can't simply be indexed by
+    % i. Instead the non-empty entry can be found:
+    tet_idx = find(~cellfun(@isempty, C_allfiles{1,i}{1,e_dbl}));
+    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,tet_idx};
+
+    if isfield(tetinfo{1,1}{1,e_dbl}{1,i}, 'area') && strcmp(tetinfo{1,1}{1,e_dbl}{1,i}.area, 'CA1')
         time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
         plot(time_range,S_eeg.data+1000*plotcount)
         plotcount = plotcount + 1;
@@ -528,8 +542,9 @@ hold on;
 title("PFC Tetrode LFP")
 plotcount = 0;
 for i = 1:length(C_allfiles)
-    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,i};
-    if tetinfo{1,1}{1,e_dbl}{1,i}.area == 'PFC'
+    tet_idx = find(~cellfun(@isempty, C_allfiles{1,i}{1,e_dbl}));
+    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,tet_idx};
+    if isfield(tetinfo{1,1}{1,e_dbl}{1,i}, 'area') && strcmp(tetinfo{1,1}{1,e_dbl}{1,i}.area, 'PFC')
         time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
         plot(time_range,S_eeg.data+1000*plotcount)
         plotcount = plotcount + 1;
@@ -557,7 +572,7 @@ end
 
 % I need to include the 'JS13' or corresponding animal, else
 % corticalripples.mat is loaded.
-File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'JS13ripples'+"*");
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'ripples'+"*");
 load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
 File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'corticalripples'+"*");
 load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
@@ -621,7 +636,7 @@ S_PFCripfilt = PFCripfilt{1,1}{1,e_dbl}{1,PFCriptet};
 % CA1 ripples
 figure;
 hold on;
-title(sprintf("CA1 Ripples | Epoch %d, Tet %d", e_dbl, CA1riptet))
+title(sprintf("Single Tet CA1 Ripples | Epoch %d, Tet %d", e_dbl, CA1riptet))
 plot(time_range, S_CA1eeg.data)
 
 filt_timerange = S_CA1ripfilt.starttime:(1/S_CA1ripfilt.samprate):S_CA1ripfilt.endtime;
@@ -645,16 +660,16 @@ legend({'riptet LFP','rip filter' rip_labels{:}})
 % PFC ripples
 figure;
 hold on;
-title(sprintf("CA1 Ripples | Epoch %d, Tet %d", e_dbl, CA1riptet))
-plot(time_range, S_CA1eeg.data)
+title(sprintf("Single Tet PFC Ripples | Epoch %d, Tet %d", e_dbl, PFCriptet))
+plot(time_range, S_PFCeeg.data)
 
-filt_timerange = S_CA1ripfilt.starttime:(1/S_CA1ripfilt.samprate):S_CA1ripfilt.endtime;
-plot(filt_timerange, S_CA1ripfilt.data(:,1), Color=[0.9290 0.6940 0.1250])
+filt_timerange = S_PFCripfilt.starttime:(1/S_PFCripfilt.samprate):S_PFCripfilt.endtime;
+plot(filt_timerange, S_PFCripfilt.data(:,1), Color=[0.9290 0.6940 0.1250])
 
 rip_labels = {};
-for i = 1:length(S_CA1rip.starttime)
-    x_vertices = [S_CA1rip.starttime(i),S_CA1rip.endtime(i),S_CA1rip.endtime(i),S_CA1rip.starttime(i)];
-    y_vertices = [min(S_CA1eeg.data),min(S_CA1eeg.data),max(S_CA1eeg.data),max(S_CA1eeg.data)];
+for i = 1:length(S_PFCrip.starttime)
+    x_vertices = [S_PFCrip.starttime(i),S_PFCrip.endtime(i),S_PFCrip.endtime(i),S_PFCrip.starttime(i)];
+    y_vertices = [min(S_PFCeeg.data),min(S_PFCeeg.data),max(S_PFCeeg.data),max(S_PFCeeg.data)];
     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.3, 'EdgeColor','none')
 
     if i == 1
@@ -665,5 +680,8 @@ for i = 1:length(S_CA1rip.starttime)
 end
 legend({'riptet LFP','rip filter' rip_labels{:}})
 
+
+
+%% 
 
 
