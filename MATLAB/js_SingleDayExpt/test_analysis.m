@@ -142,11 +142,12 @@
 % are only active during waking epochs and others only during sleep. 
 
 
+data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 
 
 %% Load data
 
-data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+
 load_rats = {'BG1_direct'}; % Which rats to load data from
 filetype = {'linfields'};
 %filetype = {'ripple01-03-30', 'delta01-03-30', 'gamma01-03-30', 'theta01-03-30', 'eeg01-03-30', 'eegref01-03-30'}; % File type to load for each rat. All files will 
@@ -365,9 +366,9 @@ end
 
 % Decide what epoch and tetrode to look at. Must be odd numbered epoch for
 % sleep.
-epoch_ch = '11';
-tetrode_ch = '25';
-eeg_filetype = append('eeg01-',epoch_ch,'-',tetrode_ch);
+e_ch = '11';
+tet_ch = '25';
+eeg_filetype = append('eeg01-',e_ch,'-',tet_ch);
 
 load_rats = {'BG1_direct'}; % Which rats to load data from
 filetype = {'ripples','sleep','rem','sws',eeg_filetype};
@@ -386,19 +387,19 @@ for i=1:length(load_rats)
 end
 
 % Extract proper epoch data
-epoch_dbl = str2double(epoch_ch);
-tetrode_dbl = str2double(tetrode_ch);
-S_eeg = eeg{1,1}{1,epoch_dbl}{1,tetrode_dbl};
+e_dbl = str2double(e_ch);
+tetrode_dbl = str2double(tet_ch);
+S_eeg = eeg{1,1}{1,e_dbl}{1,tetrode_dbl};
 time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
-S_sleep = sleep{1,1}{1,epoch_dbl};
-S_sws = sws{1,1}{1,epoch_dbl};
-S_rem = rem{1,1}{1,epoch_dbl};
-S_ripples = ripples{1,1}{1,epoch_dbl}{1,tetrode_dbl};
+S_sleep = sleep{1,1}{1,e_dbl};
+S_sws = sws{1,1}{1,e_dbl};
+S_rem = rem{1,1}{1,e_dbl};
+S_ripples = ripples{1,1}{1,e_dbl}{1,tetrode_dbl};
 
 
 figure;
 hold on;
-title(sprintf("Sleep States | Epoch %d, Tet %d", epoch_dbl, tetrode_dbl))
+title(sprintf("Sleep States | Epoch %d, Tet %d", e_dbl, tetrode_dbl))
 plot(time_range, S_eeg.data)
 
 sleep_labels = {};
@@ -460,10 +461,20 @@ legend({"LFP", sleep_labels{:}, sws_labels{:}, rem_labels{:}, ripple_labels{:}})
 
 % I want to look into ripples, but first I want to make sure that I am okay
 % just referencing the LFP from a single tetrode. (Maybe I should just use
-% the reference electrode for looking at LFP?)
+% the reference electrode for looking at LFP?). Justin says I can use a
+% ripple CA1 tetrode ('riptet' description in tetinfo file) and then
+% comepare this LFP trace to the ripple times both determined by that
+% tetrode alone (from the ripples.mat file) and by all the ripple tetrodes
+% together (from the rippletime.mat file).
 
+e_ch = '03'; % epoch to look at
+e_dbl = str2double(e_ch); 
+eeg_filetype = append('eeg01-',e_ch);
+
+
+data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'JS13_direct'}; % Which rats to load data from
-filetype = {'eeg01-05'};
+filetype = {eeg_filetype};
 
 C_allfiles = {};
 
@@ -480,7 +491,8 @@ for i=1:length(load_rats)
 end
 
 % load information about the tetrodes
-
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'tetinfo'+"*");
+load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
 
 % So now looking at the LFP data on each tetrode for one epoch:
 
@@ -497,13 +509,14 @@ end
 
 
 figure;
+sgtitle(sprintf("Epoch %d",e_dbl))
 subplot(1,2,1)
 hold on;
 title("CA1 Tetrode LFP")
 plotcount = 0;
 for i = 1:length(C_allfiles)
-    S_eeg = C_allfiles{1,i}{1,5}{1,i};
-    if tetinfo{1,1}{1,5}{1,i}.area == 'CA1'
+    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,i};
+    if tetinfo{1,1}{1,e_dbl}{1,i}.area == 'CA1'
         time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
         plot(time_range,S_eeg.data+1000*plotcount)
         plotcount = plotcount + 1;
@@ -515,22 +528,142 @@ hold on;
 title("PFC Tetrode LFP")
 plotcount = 0;
 for i = 1:length(C_allfiles)
-    S_eeg = C_allfiles{1,i}{1,5}{1,i};
-    if tetinfo{1,1}{1,5}{1,i}.area == 'PFC'
+    S_eeg = C_allfiles{1,i}{1,e_dbl}{1,i};
+    if tetinfo{1,1}{1,e_dbl}{1,i}.area == 'PFC'
         time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
         plot(time_range,S_eeg.data+1000*plotcount)
         plotcount = plotcount + 1;
     end
 end
 
-%%
+%% Now to look at ripples more closely using the data from the previous section
 
+% % Because there are 2 versions of the .mat files in some animals, using
+% the loop below causes only the last version of each file to be loaded...
+% filetype = {'ripples','rippletime'};
+% 
+% for i=1:length(load_rats)
+% 
+%     for k = 1:length(filetype)
+% 
+%         File_dir = dir(data_dir+"/"+load_rats(i)+"/**/*"+filetype(k)+"*");
+%         for j = 1:length(File_dir)
+%             load(string(fullfile(File_dir(j).folder, File_dir(j).name)));
+%         end
+% 
+%     end
+% 
+% end
+
+% I need to include the 'JS13' or corresponding animal, else
+% corticalripples.mat is loaded.
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'JS13ripples'+"*");
+load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'corticalripples'+"*");
+load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+'rippletime'+"*");
+load(string(fullfile(File_dir(1).folder, File_dir(1).name)));
+
+
+
+% For some reason, even though under tetinfo most CA1 tetrodes say 'riptet'
+% in the description, when you go to ripples and look, a smaller number
+% actually have ripple data in them, which makes me think that not all the
+% 'riptet' tetrodes were actually used for detecting ripples. 
+
+% Under tetinfo, all 17 epochs are seperated. I think this is because the
+% number of cells on a tetrode varies between epochs. But the area and
+% whether or not it is a riptet should stay the same... I think? Unless all
+% cells are lost on a tetrode, then maybe it would cease being a ripple
+% tetrode. Anyways, I think I can just look at epoch 1 to grab the area and
+% riptet data.
+e1tetinfo = tetinfo{1,1}{1,1};
+CA1_tets = []; CA1_riptets = [];
+PFC_tets = []; PFC_riptets = [];
+
+for i = 1:length(e1tetinfo)
+    
+    S_tet = e1tetinfo{i};
+
+    if strcmp(S_tet.area, 'CA1')
+        CA1_tets(end+1) = i;
+        if isfield(S_tet, 'descrip') && strcmp(S_tet.descrip, 'riptet')
+            CA1_riptets(end+1) = i;
+        end
+    elseif strcmp(S_tet.area, 'PFC')
+        PFC_tets(end+1) = i;
+        if isfield(S_tet, 'descrip') && strcmp(S_tet.descrip, 'ctxriptet')
+            PFC_riptets(end+1) = i;
+        end
+    end
+end
+
+
+% Now to look at a ripple tetrode and the ripple times as detected on ONLY
+% that tetrode.
+
+CA1riptet = CA1_riptets(1);
+PFCriptet = PFC_riptets(1);
+S_CA1rip = ripples{1,1}{1,e_dbl}{1,CA1riptet};
+S_PFCrip = corticalripples{1,1}{1,e_dbl}{1,PFCriptet};
+
+S_CA1eeg = C_allfiles{1,CA1riptet}{1,e_dbl}{1,CA1riptet};
+S_PFCeeg = C_allfiles{1,PFCriptet}{1,e_dbl}{1,PFCriptet};
+
+% Load ripple-filtered LFP data for those tetrodes
+File_dir = dir(data_dir+"/"+load_rats(1)+"/**/*"+append('JS13ripple01-',e_ch)+"*");
+CA1ripfilt = struct2cell(load(string(fullfile(File_dir(CA1riptet).folder, File_dir(CA1riptet).name))));
+PFCripfilt = struct2cell(load(string(fullfile(File_dir(PFCriptet).folder, File_dir(PFCriptet).name))));
+CA1ripfilt = CA1ripfilt{:}; PFCripfilt = PFCripfilt{:};
+S_CA1ripfilt = CA1ripfilt{1,1}{1,e_dbl}{1,CA1riptet};
+S_PFCripfilt = PFCripfilt{1,1}{1,e_dbl}{1,PFCriptet};
+
+% CA1 ripples
 figure;
 hold on;
-S_eeg = C_allfiles{1,3}{1,5}{1,3};
-time_range = S_eeg.starttime:(1/S_eeg.samprate):S_eeg.endtime;
-plot(time_range,S_eeg.data)
+title(sprintf("CA1 Ripples | Epoch %d, Tet %d", e_dbl, CA1riptet))
+plot(time_range, S_CA1eeg.data)
 
+filt_timerange = S_CA1ripfilt.starttime:(1/S_CA1ripfilt.samprate):S_CA1ripfilt.endtime;
+plot(filt_timerange, S_CA1ripfilt.data(:,1), Color=[0.9290 0.6940 0.1250])
+
+rip_labels = {};
+for i = 1:length(S_CA1rip.starttime)
+    x_vertices = [S_CA1rip.starttime(i),S_CA1rip.endtime(i),S_CA1rip.endtime(i),S_CA1rip.starttime(i)];
+    y_vertices = [min(S_CA1eeg.data),min(S_CA1eeg.data),max(S_CA1eeg.data),max(S_CA1eeg.data)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.3, 'EdgeColor','none')
+
+    if i == 1
+        rip_labels{i} = "ripple";
+    else
+        rip_labels{i} = "";
+    end
+end
+legend({'riptet LFP','rip filter' rip_labels{:}})
+
+
+% PFC ripples
+figure;
+hold on;
+title(sprintf("CA1 Ripples | Epoch %d, Tet %d", e_dbl, CA1riptet))
+plot(time_range, S_CA1eeg.data)
+
+filt_timerange = S_CA1ripfilt.starttime:(1/S_CA1ripfilt.samprate):S_CA1ripfilt.endtime;
+plot(filt_timerange, S_CA1ripfilt.data(:,1), Color=[0.9290 0.6940 0.1250])
+
+rip_labels = {};
+for i = 1:length(S_CA1rip.starttime)
+    x_vertices = [S_CA1rip.starttime(i),S_CA1rip.endtime(i),S_CA1rip.endtime(i),S_CA1rip.starttime(i)];
+    y_vertices = [min(S_CA1eeg.data),min(S_CA1eeg.data),max(S_CA1eeg.data),max(S_CA1eeg.data)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.3, 'EdgeColor','none')
+
+    if i == 1
+        rip_labels{i} = "ripple";
+    else
+        rip_labels{i} = "";
+    end
+end
+legend({'riptet LFP','rip filter' rip_labels{:}})
 
 
 
