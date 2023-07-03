@@ -168,7 +168,6 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % rippletime missing
 
 
-% So the only animals with rippletime files are ER1_NEW, KL8, and JS15.
 
 
 %% Load data
