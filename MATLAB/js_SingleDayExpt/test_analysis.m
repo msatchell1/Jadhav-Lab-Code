@@ -1,4 +1,4 @@
-% This script is just for exploring and getting familiar with the data from
+% This script is just for exploring and getting familiar with the data from 
 % Justin's single day W track experiment.
 %
 % Michael Satchell 6/26/23
@@ -160,12 +160,16 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 
 % JS34:
 % rippletime missing
+% cellinfo has 19 epochs
 
 % ZT2:
 % rippletime missing
 
 % BG1:
 % rippletime missing
+
+% ER1_NEW:
+% cellinfo has 19 epochs
 
 
 % So the only animals with rippletime files are ER1_NEW, KL8, and JS15.
