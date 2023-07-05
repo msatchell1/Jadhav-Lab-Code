@@ -203,25 +203,60 @@ for a = 1:length(C_alldata)
     % Now to add the data to the matrices, I need to add NaN elements to
     % the vectors so they can fill in the matrix columns.
     if length(ratdata) < max(epochcounts)
-        
+        CA1_std(end+1:max(epochcounts)) = nan;
+        CA1_mean(end+1:max(epochcounts)) = nan;
+        CA1_median(end+1:max(epochcounts)) = nan;
+        PFC_std(end+1:max(epochcounts)) = nan;
+        PFC_mean(end+1:max(epochcounts)) = nan;
+        PFC_median(end+1:max(epochcounts)) = nan;
     end
+
+
     CA1_std_mat(:,a) = CA1_std';
-    % CA1_mean_mat(a) = {CA1_mean};
-    % CA1_median_mat(a) = {CA1_median};
-    % PFC_std_mat(a) = {PFC_std};
-    % PFC_mean_mat(a) = {PFC_mean};
-    % PFC_median_mat(a) = {PFC_median};
+    CA1_mean_mat(:,a) = CA1_mean';
+    CA1_median_mat(:,a) = CA1_median';
+    PFC_std_mat(:,a) = PFC_std';
+    PFC_mean_mat(:,a) = PFC_mean';
+    PFC_median_mat(:,a) = PFC_median';
 
 end
 
 
 % I'm not sure whether to use the mean or median data for the aggregate
 % analyses, so Im going to go with mean for now.
+% Here the average across all animals is taken to get a mean firing rate
+% across all epochs.
 
+a_CA1_mean = mean(CA1_mean_mat,2,'omitnan'); % mean across animals
+a_PFC_mean = mean(PFC_mean_mat,2,'omitnan'); 
 
+a_CA1_std = std(CA1_mean_mat,0,2,'omitnan'); % Std across animals
+a_PFC_std = std(PFC_mean_mat,0,2,'omitnan');
 
+% Indices for sleep and wake
+sleep_inds = 1:2:size(a_CA1_mean,1);
+wake_inds = 2:2:size(a_CA1_mean,1);
 
+figure;
+sgtitle(sprintf("Mean Firing Rates Across %d Animals",length(load_rats)));
 
+subplot(1,2,1)
+hold on;
+title("CA1")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, a_CA1_mean(sleep_inds), a_CA1_std(sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
+errorbar(wake_inds, a_CA1_mean(wake_inds), a_CA1_std(wake_inds), 'o', Color=[0 0.4470 0.7410])
+legend("sleep","wake");
+
+subplot(1,2,2)
+hold on;
+title("PFC")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, a_PFC_mean(sleep_inds), a_PFC_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, a_PFC_mean(wake_inds), a_PFC_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+legend("sleep","wake");
 
 
 
