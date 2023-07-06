@@ -708,6 +708,5 @@ if cr_exist % Do the same for PFC ripples if that file exists in the animal fold
 
 end
 
-%% 
 
 

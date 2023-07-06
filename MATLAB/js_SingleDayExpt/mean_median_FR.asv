@@ -157,6 +157,8 @@ PFC_std_mat = NaN(max(epochcounts),length(C_alldata));
 PFC_mean_mat = NaN(max(epochcounts),length(C_alldata));
 PFC_median_mat = NaN(max(epochcounts),length(C_alldata));
 
+CA1_allrates = {}; PFC_allrates = {};
+
 % Loop all animals
 for a = 1:length(C_alldata)
 
@@ -191,7 +193,9 @@ for a = 1:length(C_alldata)
             end
         end
     end
-
+    
+    % Store all mean firing rates in cell arrays for later use
+    CA1_allrates(a) = {CA1_mat}; PFC_allrates(a) = {PFC_mat};
 
     CA1_std = std(CA1_mat,0,1,"omitnan");
     CA1_mean = mean(CA1_mat,1,"omitnan");
@@ -229,6 +233,8 @@ end
 
 a_CA1_mean = mean(CA1_mean_mat,2,'omitnan'); % mean across animals
 a_PFC_mean = mean(PFC_mean_mat,2,'omitnan'); 
+a_CA1_median = median(CA1_mean_mat,2,'omitnan'); %median
+a_PFC_median = median(PFC_mean_mat,2,'omitnan');
 
 a_CA1_std = std(CA1_mean_mat,0,2,'omitnan'); % Std across animals
 a_PFC_std = std(PFC_mean_mat,0,2,'omitnan');
@@ -237,21 +243,98 @@ a_PFC_std = std(PFC_mean_mat,0,2,'omitnan');
 sleep_inds = 1:2:size(a_CA1_mean,1);
 wake_inds = 2:2:size(a_CA1_mean,1);
 
-figure;
+figure; %mean
 sgtitle(sprintf("Mean Firing Rates Across %d Animals",length(load_rats)));
 
 subplot(1,2,1)
 hold on;
 title("CA1")
-ylabel("Mean Firing Ra")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
 errorbar(sleep_inds, a_CA1_mean(sleep_inds), a_CA1_std(sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
 errorbar(wake_inds, a_CA1_mean(wake_inds), a_CA1_std(wake_inds), 'o', Color=[0 0.4470 0.7410])
 legend("sleep","wake");
 
+subplot(1,2,2)
+hold on;
+title("PFC")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, a_PFC_mean(sleep_inds), a_PFC_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, a_PFC_mean(wake_inds), a_PFC_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+legend("sleep","wake");
+
+
+figure; %median
+sgtitle(sprintf("Median Firing Rates Across %d Animals",length(load_rats)));
+
+subplot(1,2,1)
+hold on;
+title("CA1")
+ylabel("Median Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, a_CA1_median(sleep_inds), a_CA1_std(sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
+errorbar(wake_inds, a_CA1_median(wake_inds), a_CA1_std(wake_inds), 'o', Color=[0 0.4470 0.7410])
+legend("sleep","wake");
+
+subplot(1,2,2)
+hold on;
+title("PFC")
+ylabel("Median Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, a_PFC_mean(sleep_inds), a_PFC_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, a_PFC_mean(wake_inds), a_PFC_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+legend("sleep","wake");
 
 
 
+%% Trying the same thing but treating as if all nrns came from 1 animal.
 
+CA1_1a = []; PFC_1a = []; % "One animal" matrices. Each column will be an epoch,
+% and the rows will be appended mean rate data from all rats.
 
+for r = 1:size(CA1_allrates,2)
 
+    MCA1 = CA1_allrates{1,r};
+    MPFC = PFC_allrates{1,r};
+    if size(MCA1,2) < max(epochcounts)
+        % Horizontally append the necessary number of columns of NaNs to
+        % the matrix for later appending.
+        MCA1 = [MCA1 NaN(size(MCA1,1),(max(epochcounts)-size(MCA1,2)))];
+        MPFC = [MPFC NaN(size(MPFC,1),(max(epochcounts)-size(MPFC,2)))];
+    end
+
+    CA1_1a = [CA1_1a; MCA1]; PFC_1a = [PFC_1a; MPFC];
+end
+
+CA1_1a_mean = mean(CA1_1a,1,'omitnan'); % mean across animals
+PFC_1a_mean = mean(PFC_1a,1,'omitnan'); 
+
+CA1_1a_std = std(CA1_1a,0,1,'omitnan'); % Std across animals
+PFC_1a_std = std(PFC_1a,0,1,'omitnan');
+
+% Indices for sleep and wake
+sleep_inds = 1:2:size(CA1_1a_mean,2);
+wake_inds = 2:2:size(CA1_1a_mean,2);
+
+figure;
+sgtitle(sprintf("1a Mean Firing Rates Across %d Animals",length(load_rats)));
+
+subplot(1,2,1)
+hold on;
+title("CA1")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, CA1_1a_mean(sleep_inds), CA1_1a_std(sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
+errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_std(wake_inds), 'o', Color=[0 0.4470 0.7410])
+legend("sleep","wake");
+
+subplot(1,2,2)
+hold on;
+title("PFC")
+ylabel("Mean Firing Rate (Hz)")
+xlabel("Epoch")
+errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+legend("sleep","wake");
 
