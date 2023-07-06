@@ -13,7 +13,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % tetrodes for each rat.
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
-% Mean firing rate data for each nrn is held in the cellinfo file.
+
 filetype = {'linpos01','linfields01'};
 
 C_alldata = {}; % Cell array to hold data for each rat. If multiple filetypes 

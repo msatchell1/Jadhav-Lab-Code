@@ -54,6 +54,8 @@ CA1_mat = NaN([max(nrn_nums),length(ratdata)]); % Firing rate matrix. I CANNOT a
 % that a given row of this matrix holds the same cell across epochs,
 % because the number of cells on tetrodes changes every epoch.
 PFC_mat = NaN([max(nrn_nums),length(ratdata)]);
+CA1_numnrns = zeros(1,length(ratdata));
+PFC_numnrns = zeros(1,length(ratdata));
 
 % Now populate matrix with mean firing rates for every nrn in every epoch.
 for e = 1:length(ratdata)
@@ -63,14 +65,24 @@ for e = 1:length(ratdata)
         if isfield(flat_nrns{1,n}, 'meanrate')
             if strcmp(flat_nrns{1,n}.area, 'CA1')
                 CA1_mat(n,e) = flat_nrns{1,n}.meanrate;
+                CA1_numnrns(e) = CA1_numnrns(e) + 1;
             elseif strcmp(flat_nrns{1,n}.area, 'PFC')
                 PFC_mat(n,e) = flat_nrns{1,n}.meanrate;
+                PFC_numnrns(e) = PFC_numnrns(e) + 1;
             end
         end
     end
 end
 
-
+% Later I want to calculate confidence intervals for plotting error
+CA1_CI95 = {}; % To store probability
+PFC_CI95 = {};
+for e = 1:size(CA1_mat,2)
+    cCI95 = tinv([0.025 0.975], CA1_numnrns(e)-1);
+    pCI95 = tinv([0.025 0.975], PFC_numnrns(e)-1);
+    CA1_CI95{e} = cCI95;
+    PFC_CI95{e} = pCI95;
+end
 
 figure;
 sgtitle(sprintf("Animal %s, Epoch 1 CA1 Cells: %d, Epoch 1 PFC Cells: %d",...
@@ -79,7 +91,7 @@ sgtitle(sprintf("Animal %s, Epoch 1 CA1 Cells: %d, Epoch 1 PFC Cells: %d",...
 % standard deviation of the mean firing rates for the error bars, or
 % something else.
 subplot(2,2,1)
-title("CA1 Mean FR")
+title("CA1 Mean FR (95% CI Error)")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
 hold on;
@@ -91,8 +103,17 @@ CA1_sleep_std = CA1_std(sleep_inds);
 CA1_wake_std = CA1_std(wake_inds);
 CA1_sleep_mean = CA1_mean(sleep_inds);
 CA1_wake_mean = CA1_mean(wake_inds);
-errorbar(sleep_inds, CA1_sleep_mean, CA1_sleep_std, 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
-errorbar(wake_inds, CA1_wake_mean, CA1_wake_std, 'o', Color=[0 0.4470 0.7410])
+
+CA1_yCI95 = {};
+for e = 1:length(ratdata)
+    ySEM = CA1_std./sqrt(CA1_numnrns);
+    CA1_yCI95{e} = bsxfun(@times, ySEM(e), CA1_CI95{1,e}(:)); 
+end
+CA1_yCI95 = [CA1_yCI95{:}];
+
+
+errorbar(sleep_inds, CA1_sleep_mean, CA1_yCI95(1,sleep_inds), CA1_yCI95(2,sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
+errorbar(wake_inds, CA1_wake_mean, CA1_yCI95(1,wake_inds), CA1_yCI95(2,wake_inds), 'o', Color=[0 0.4470 0.7410])
 legend("sleep","wake");
 
 subplot(2,2,2)
@@ -307,6 +328,9 @@ for r = 1:size(CA1_allrates,2)
     CA1_1a = [CA1_1a; MCA1]; PFC_1a = [PFC_1a; MPFC];
 end
 
+CA1_numnrns = sum(~isnan(CA1_1a),1);
+PFC_numnrns = sum(~isnan(PFC_1a),1);
+
 CA1_1a_mean = mean(CA1_1a,1,'omitnan'); % mean across animals
 PFC_1a_mean = mean(PFC_1a,1,'omitnan'); 
 
@@ -338,3 +362,6 @@ errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_std(sleep_inds), 'o',Color=
 errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
 legend("sleep","wake");
 
+
+
+% Using the same matrices that hold all this data, plot a 
