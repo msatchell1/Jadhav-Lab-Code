@@ -179,8 +179,8 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 
 
 load_rats = {'BG1_direct'}; % Which rats to load data from
-% filetype = {'linfields'};
-filetype = {'ripple01-03-30', 'delta01-03-30', 'gamma01-03-30', 'theta01-03-30', 'eeg01-03-30', 'eegref01-03-30'}; % File type to load for each rat. All files will 
+filetype = {'linfields'};
+%filetype = {'ripple01-03-30', 'delta01-03-30', 'gamma01-03-30', 'theta01-03-30', 'eeg01-03-30', 'eegref01-03-30'}; % File type to load for each rat. All files will 
 % be loaded that contain filetype in the file name. Use 'eeg01' when you
 % want all the LFP files, otherwise eegref will also be included.
 
@@ -253,7 +253,7 @@ legend();
 % figure;
 % hold on;
 % title("Filtered LFP Traces")
-% xlabel("Time (s)")
+% xlabel("Time (ms)")
 % plot(time_range, S_delta.data(:,1),DisplayName='delta')
 % plot(time_range, S_gamma.data(:,1),DisplayName='gamma')
 % plot(time_range, S_ripple.data(:,1),DisplayName='ripple')
@@ -265,7 +265,7 @@ figure;
 subplot(2,2,1)
 hold on;
 title("Delta Filter (1-4 Hz)")
-xlabel("Time (s)")
+xlabel("Time (ms)")
 plot(time_range, S_eeg.data, DisplayName='raw LFP')
 plot(time_range, S_delta.data(:,1),DisplayName='delta')
 legend()
@@ -273,7 +273,7 @@ legend()
 subplot(2,2,2)
 hold on;
 title("Theta Filter (6-12 Hz)")
-xlabel("Time (s)")
+xlabel("Time (ms)")
 plot(time_range, S_eeg.data, DisplayName='raw LFP')
 plot(time_range, S_theta.data(:,1),DisplayName='theta')
 legend()
@@ -281,7 +281,7 @@ legend()
 subplot(2,2,3)
 hold on;
 title("Gamma Filter (40-100 Hz)")
-xlabel("Time (s)")
+xlabel("Time (ms)")
 plot(time_range, S_eeg.data, DisplayName='raw LFP')
 plot(time_range, S_gamma.data(:,1),DisplayName='gamma')
 legend()
@@ -289,7 +289,7 @@ legend()
 subplot(2,2,4)
 hold on;
 title("Ripple Filter (150-250 Hz)")
-xlabel("Time (s)")
+xlabel("Time (ms)")
 plot(time_range, S_eeg.data, DisplayName='raw LFP')
 plot(time_range, S_ripple.data(:,1),DisplayName='ripple')
 legend()
@@ -430,8 +430,6 @@ S_ripples = ripples{1,1}{1,e_dbl}{1,tetrode_dbl};
 figure;
 hold on;
 title(sprintf("Sleep States | Epoch %d, Tet %d", e_dbl, tetrode_dbl))
-xlabel("Time (s)")
-ylabel("Scaled Voltage")
 plot(time_range, S_eeg.data)
 
 sleep_labels = {};
