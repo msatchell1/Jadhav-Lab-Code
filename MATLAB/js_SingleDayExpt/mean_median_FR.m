@@ -308,7 +308,7 @@ legend("sleep","wake");
 
 
 
-%% Trying the same thing but treating as if all nrns came from 1 animal.
+%% Trying the same thing but treating as if all nrns came from 1 animal. Also plot histograms
 
 CA1_1a = []; PFC_1a = []; % "One animal" matrices. Each column will be an epoch,
 % and the rows will be appended mean rate data from all rats.
@@ -384,4 +384,61 @@ legend("sleep","wake");
 
 
 
-% Using the same matrices that hold all this data, plot a 
+
+
+%% Using the same matrices that hold all this data, plot histograms for CA1
+% and PFC split into sleep and wake
+CA1_1a_sleep = CA1_1a(:,sleep_inds); PFC_1a_sleep = PFC_1a(:,sleep_inds);
+CA1_1a_srv = CA1_1a_sleep(~isnan(CA1_1a_sleep)); % sleep rate vector of all neurons.
+PFC_1a_srv = PFC_1a_sleep(~isnan(PFC_1a_sleep));
+
+% same for wake
+CA1_1a_wake = CA1_1a(:,wake_inds); PFC_1a_wake = PFC_1a(:,wake_inds);
+CA1_1a_wrv = CA1_1a_wake(~isnan(CA1_1a_wake)); 
+PFC_1a_wrv = PFC_1a_wake(~isnan(PFC_1a_wake));
+
+% Define bin edges for histograms, using the number of bins to be the sqrt
+% of the smaller number of neurons between the wake and sleep sessions.
+CA1_edges = linspace(0, max(CA1_1a,[],'all'), 3*sqrt(min([length(CA1_1a_srv),length(CA1_1a_wrv)])));
+PFC_edges = linspace(0, max(PFC_1a,[],'all'), 3*sqrt(min([length(PFC_1a_srv),length(PFC_1a_wrv)])));
+
+% KS test between the sleep and wake distributions
+[~,pval_CA1] = kstest2(CA1_1a_srv,CA1_1a_wrv);
+[~,pval_PFC] = kstest2(PFC_1a_srv,PFC_1a_wrv);
+
+% Now plot histograms
+figure;
+hold on;
+title("CA1 Firing Rates Sleep vs Wake")
+xlabel("Firing Rate (Hz)")
+ylabel("Counts")
+h_CA1s = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.01 1]);
+h_CA1w = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.5 0.8]);
+txt = sprintf("pval = %d",pval_CA1);
+text(max(CA1_edges)/4,max(h_CA1s.BinCounts)/2, txt)
+legend("sleep","wake")
+
+figure;
+hold on;
+title("PFC Firing Rates Sleep vs Wake")
+xlabel("Firing Rate (Hz)")
+ylabel("Counts")
+h_PFCs = histogram(PFC_1a_srv, PFC_edges, FaceColor=[0.9 0.4 0]);
+h_PFCw = histogram(PFC_1a_wrv, PFC_edges, FaceColor=[1 0.8 0]);
+txt = sprintf("pval = %d",pval_PFC);
+text(max(PFC_edges)/4,max(h_PFCs.BinCounts)/2, txt)
+legend("sleep","wake")
+
+% Plot 4-tile sublot of combinations of CA1 and PFC in sleep and wake
+
+figure;
+hold on;
+title("CA1 and PFC Rates")
+xlabel("Firing Rate (Hz)")
+ylabel("Counts")
+h_CA1 = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.01 1]);
+h_PFC = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.5 0.8]);
+txt = sprintf("pval = %d",pval_CA1);
+text(max(CA1_edges)/4,max(h_CA1s.BinCounts)/2, txt)
+legend("sleep","wake")
+

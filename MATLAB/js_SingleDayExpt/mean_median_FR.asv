@@ -308,7 +308,7 @@ legend("sleep","wake");
 
 
 
-%% Trying the same thing but treating as if all nrns came from 1 animal.
+%% Trying the same thing but treating as if all nrns came from 1 animal. Also plot histograms
 
 CA1_1a = []; PFC_1a = []; % "One animal" matrices. Each column will be an epoch,
 % and the rows will be appended mean rate data from all rats.
@@ -336,8 +336,8 @@ PFC_1a_mean = mean(PFC_1a,1,'omitnan');
 CA1_1a_std = std(CA1_1a,0,1,'omitnan'); % Std across animals
 PFC_1a_std = std(PFC_1a,0,1,'omitnan');
 
-CA1_1a_SEM = CA1_1a_std./CA1_numnrns;
-PFC_1a_SEM = PFC_1a_std./PFC_numnrns;
+CA1_1a_SEM = CA1_1a_std./sqrt(CA1_numnrns);
+PFC_1a_SEM = PFC_1a_std./sqrt(PFC_numnrns);
 CA1_1a_CI = zeros(2,size(CA1_1a_mean,2)); % Note size(CA1_1a_mean,2) is the number of epochs
 PFC_1a_CI = zeros(2,size(CA1_1a_mean,2));
 
@@ -367,7 +367,8 @@ ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
 errorbar(sleep_inds, CA1_1a_mean(sleep_inds), CA1_1a_CI(1,sleep_inds),CA1_1a_CI(2,sleep_inds), ...
     'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
-errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_CI(wake_inds), 'o', Color=[0 0.4470 0.7410])
+errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_CI(1,wake_inds), CA1_1a_CI(2,wake_inds), ...
+    'o', Color=[0 0.4470 0.7410])
 legend("sleep","wake");
 
 subplot(1,2,2)
@@ -375,10 +376,43 @@ hold on;
 title("PFC")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
-errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
-errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_CI(1,sleep_inds),PFC_1a_CI(2,sleep_inds), ...
+    'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_CI(1,wake_inds),PFC_1a_CI(2,wake_inds), ...
+    'o', Color=[0.8500 0.3250 0.0980])
 legend("sleep","wake");
 
 
 
-% Using the same matrices that hold all this data, plot a 
+
+
+%% Using the same matrices that hold all this data, plot histograms for CA1
+% and PFC split into sleep and wake
+CA1_1a_sleep = CA1_1a(:,sleep_inds); PFC_1a_sleep = PFC_1a(:,sleep_inds);
+CA1_1a_srv = CA1_1a_sleep(~isnan(CA1_1a_sleep)); % sleep rate vector of all neurons.
+PFC_1a_srv = PFC_1a_sleep(~isnan(PFC_1a_sleep));
+
+% same for wake
+CA1_1a_wake = CA1_1a(:,wake_inds); PFC_1a_wake = PFC_1a(:,wake_inds);
+CA1_1a_wrv = CA1_1a_wake(~isnan(CA1_1a_wake)); 
+PFC_1a_wrv = PFC_1a_wake(~isnan(PFC_1a_wake));
+
+% Define bin edges for histograms, using the number of bins to be the sqrt
+% of the smaller number of neurons between the wake and sleep sessions.
+CA1_edges = linspace(0, max(CA1_1a,[],'all'), 10*sqrt(min([length(CA1_1a_srv),length(CA1_1a_wrv)])));
+PFC_edges = linspace(0, max(PFC_1a,[],'all'), 5*sqrt(min([length(PFC_1a_srv),length(PFC_1a_wrv)])));
+
+% KS test between the sleep and wake distributions
+[~,pval_CA1] = kstest2(CA1_1a_srv,CA1_1a_wrv);
+[~,pval_PFC] = kstest2(PFC_1a_srv,PFC_1a_wrv);
+
+% Now plot histograms
+figure;
+hold on;
+h_CA1s = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.01 1]);
+h_CA1w = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.5 0.8]);
+txt = sprintf("pval = %d",pval_CA1);
+text(max())
+legend("sleep","wake")
+
+
