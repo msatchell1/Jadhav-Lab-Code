@@ -104,13 +104,12 @@ CA1_wake_std = CA1_std(wake_inds);
 CA1_sleep_mean = CA1_mean(sleep_inds);
 CA1_wake_mean = CA1_mean(wake_inds);
 
-CA1_yCI95 = {};
+CA1_yCI95 = {}; % Calculating confidence interval error
 for e = 1:length(ratdata)
     ySEM = CA1_std./sqrt(CA1_numnrns);
     CA1_yCI95{e} = bsxfun(@times, ySEM(e), CA1_CI95{1,e}(:)); 
 end
 CA1_yCI95 = [CA1_yCI95{:}];
-
 
 errorbar(sleep_inds, CA1_sleep_mean, CA1_yCI95(1,sleep_inds), CA1_yCI95(2,sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
 errorbar(wake_inds, CA1_wake_mean, CA1_yCI95(1,wake_inds), CA1_yCI95(2,wake_inds), 'o', Color=[0 0.4470 0.7410])
@@ -337,6 +336,23 @@ PFC_1a_mean = mean(PFC_1a,1,'omitnan');
 CA1_1a_std = std(CA1_1a,0,1,'omitnan'); % Std across animals
 PFC_1a_std = std(PFC_1a,0,1,'omitnan');
 
+CA1_1a_SEM = CA1_1a_std./sqrt(CA1_numnrns);
+PFC_1a_SEM = PFC_1a_std./sqrt(PFC_numnrns);
+CA1_1a_CI = zeros(2,size(CA1_1a_mean,2)); % Note size(CA1_1a_mean,2) is the number of epochs
+PFC_1a_CI = zeros(2,size(CA1_1a_mean,2));
+
+CI_val = 95; % Confidence interval to be used in %.
+
+for e = 1:size(CA1_1a_mean,2)
+    % CI from a normal? distribution with N-1 data points
+    temp_CI_CA1 = tinv([(1-CI_val/100)/2, 1-(1-CI_val/100)/2], CA1_numnrns(1,e)-1); 
+    temp_CI_PFC = tinv([(1-CI_val/100)/2, 1-(1-CI_val/100)/2], PFC_numnrns(1,e)-1);
+
+    % multiplying this CI by the SEM to get the error size
+    CA1_1a_CI(:,e) = bsxfun(@times, CA1_1a_SEM(e), temp_CI_CA1(:));
+    PFC_1a_CI(:,e) = bsxfun(@times, PFC_1a_SEM(e), temp_CI_PFC(:));
+end
+
 % Indices for sleep and wake
 sleep_inds = 1:2:size(CA1_1a_mean,2);
 wake_inds = 2:2:size(CA1_1a_mean,2);
@@ -349,8 +365,10 @@ hold on;
 title("CA1")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
-errorbar(sleep_inds, CA1_1a_mean(sleep_inds), CA1_1a_std(sleep_inds), 'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
-errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_std(wake_inds), 'o', Color=[0 0.4470 0.7410])
+errorbar(sleep_inds, CA1_1a_mean(sleep_inds), CA1_1a_CI(1,sleep_inds),CA1_1a_CI(2,sleep_inds), ...
+    'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
+errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_CI(1,wake_inds), CA1_1a_CI(2,wake_inds), ...
+    'o', Color=[0 0.4470 0.7410])
 legend("sleep","wake");
 
 subplot(1,2,2)
@@ -358,8 +376,10 @@ hold on;
 title("PFC")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
-errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_std(sleep_inds), 'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
-errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_std(wake_inds), 'o', Color=[0.8500 0.3250 0.0980])
+errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_CI(1,sleep_inds),PFC_1a_CI(2,sleep_inds), ...
+    'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
+errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_CI(1,wake_inds),PFC_1a_CI(2,wake_inds), ...
+    'o', Color=[0.8500 0.3250 0.0980])
 legend("sleep","wake");
 
 
