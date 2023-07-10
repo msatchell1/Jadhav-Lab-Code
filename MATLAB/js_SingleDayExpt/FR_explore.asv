@@ -9,31 +9,73 @@
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % For this analysis I want to consider all rats, and all nrns on all
 % tetrodes for each rat.
+
+% All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
-% Mean firing rate data for each nrn is held in the cellinfo file.
-filetype = {'cellinfo'};
+% Common filetypes: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
+filetype = {'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'};
 
-C_alldata = {}; % Cell array to hold data for each rat
+C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
+% are loaded, each row holds a different file type, ordered in the same
+% order as the elements in filetype.
 
-for i = 1:length(load_rats)
+disp("Loading new animal data... ")
+for r = 1:length(load_rats)
+    fprintf("Loaded animal: %s \n",load_rats{r})
 
-    File_dir = dir(data_dir+"/"+load_rats(i)+'_direct'+"/*"+filetype(1)+"*");
-    % There should only be one cellinfo file per animal
-    if isempty(File_dir)
-        error("cellinfo file does not exist for animal: %s \n",load_rats{i})
-    elseif length(File_dir) > 1
-        error("Only 1 file per animal expected. Number loaded for animal %s: %d \n", load_rats{i},lenth(File_dir))
-    else
-        file = struct2cell(load(string(fullfile(File_dir.folder, File_dir.name)))); % load data
-        file = file{:};
-        C_alldata{i} = file{1,1};
-        fprintf("Loaded animal: %s      Num epochs: %d      Num cells: ~%d \n", load_rats{i},length(file{1,1}),length([file{1,1}{1,1}{:}]))
-        % Note that the number of cells on a tetrode varies across the
-        % epochs, so the number listed here is only an estimate based on
-        % the first epoch.
+    for ft = 1:length(filetype)    
+
+        short_name = load_rats{r};
+        chop_idx = strfind(load_rats{r},'_') - 1;
+        if ~isempty(chop_idx)
+            short_name = load_rats{r}(1:chop_idx); % Gets the first characters of the rat's name before an '_'.
+            % So far this is only needed for ER1_NEW to remove the '_NEW'.
+        end
+
+        % Does not load from EEG folder
+        File_dir = dir(data_dir+"/"+load_rats(r)+'_direct'+"/"+short_name+filetype{ft}+"*");
+    
+        if isempty(File_dir)
+            error("%s file does not exist for animal: %s \n",filetype{ft},load_rats{r})
+        elseif length(File_dir) > 1
+            error("More than one file detected when searching for: %s, in animal: %s \n" + ...
+                "Change names in filetype to be more specific.", filetype{ft},load_rats{r});
+        else
+            file = struct2cell(load(string(fullfile(File_dir.folder, File_dir.name)))); % load data
+            file = file{:};
+            C_alldata{ft,r} = file{1,1};
+            fprintf("       Loaded file: %s  \n",  File_dir.name)
+        end
     end
 end
+
+
+% load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+% 
+% % Mean firing rate data for each nrn is held in the cellinfo file.
+% filetype = {'cellinfo'};
+% 
+% C_alldata = {}; % Cell array to hold data for each rat
+% 
+% for i = 1:length(load_rats)
+% 
+%     File_dir = dir(data_dir+"/"+load_rats(i)+'_direct'+"/*"+filetype(1)+"*");
+%     % There should only be one cellinfo file per animal
+%     if isempty(File_dir)
+%         error("cellinfo file does not exist for animal: %s \n",load_rats{i})
+%     elseif length(File_dir) > 1
+%         error("Only 1 file per animal expected. Number loaded for animal %s: %d \n", load_rats{i},lenth(File_dir))
+%     else
+%         file = struct2cell(load(string(fullfile(File_dir.folder, File_dir.name)))); % load data
+%         file = file{:};
+%         C_alldata{i} = file{1,1};
+%         fprintf("Loaded animal: %s      Num epochs: %d      Num cells: ~%d \n", load_rats{i},length(file{1,1}),length([file{1,1}{1,1}{:}]))
+%         % Note that the number of cells on a tetrode varies across the
+%         % epochs, so the number listed here is only an estimate based on
+%         % the first epoch.
+%     end
+% end
 
 
 
@@ -492,7 +534,7 @@ legend("sleep","wake")
 
 subplot(2,2,3)
 hold on;
-title("Sleep Firing Rates")
+title("Sleep")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
 h_CA1 = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
@@ -503,7 +545,7 @@ legend("CA1","PFC")
 
 subplot(2,2,4)
 hold on;
-title("Wake Firing Rates")
+title("Wake")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
 h_CA1 = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
@@ -537,7 +579,7 @@ CA1s_cdf.Color = [0 0.01 1];
 CA1w_cdf = cdfplot(CA1_1a_wrv);
 CA1w_cdf.Color=[0 0.5 0.8];
 title("CA1")
-ylabel("Fraction of Counts")
+ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
 legend("sleep","wake",Location='best')
 txt = sprintf("pval = %.3d",pval_CA1);
@@ -552,7 +594,7 @@ PFCs_cdf.Color = [0.9 0.4 0];
 PFCw_cdf = cdfplot(PFC_1a_wrv);
 PFCw_cdf.Color=[1 0.8 0];
 title("PFC")
-ylabel("Fraction of Counts")
+ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
 legend("sleep","wake",Location='best')
 txt = sprintf("pval = %.3d",pval_PFC);
@@ -565,7 +607,7 @@ CA1s_cdf.Color = [0 0.4470 0.7410];
 PFCs_cdf = cdfplot(PFC_1a_srv);
 PFCs_cdf.Color=[0.8500 0.3250 0.0980];
 title("Sleep")
-ylabel("Fraction of Counts")
+ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
 legend("CA1","PFC",Location='best')
 txt = sprintf("pval = %.3d",pval_sleep);
@@ -578,7 +620,7 @@ CA1w_cdf.Color = [0 0.4470 0.7410];
 PFCw_cdf = cdfplot(PFC_1a_wrv);
 PFCw_cdf.Color=[0.8500 0.3250 0.0980];
 title("Wake")
-ylabel("Fraction of Counts")
+ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
 legend("CA1","PFC",Location='best')
 txt = sprintf("pval = %.3d",pval_wake);
@@ -586,5 +628,8 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 
 
 %% Now I want to split the firing rates into the groups that Aanchal did:
-% Wake, on track, NREM, and REM.
+% On track, wake during sleep sessions, NREM, and REM.
+
+
+
 

@@ -20,9 +20,7 @@
 
 % There are 17 epochs, with 8 W track behavior sessions and 9 sleep
 % sessions. Every odd epoch is a sleep epoch. All animals have 32 tetrodes,
-% except for ZT2 which has 64. Some animals have an extra 2 epochs, but
-% Justin said to just ignore those when doing my analyses. He didn't
-% include epoch 18 or 19 in his analyses.
+% except for ZT2 which has 64.
 
 
 % Each animal has an EEG folder which inside contains a ton of files. These
@@ -151,6 +149,44 @@
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 
+%% Notes on missing data
+
+% ZT2:
+% sleep missing
+% waking missing
+% sws missing
+% rem missing
+% rippletime missing
+
+% ER1_NEW:
+% cellinfo, tetinfo, and spikes all have 19 epochs.
+% sleep, sws, rem, waking, ripples, and rippletime all have only 17 epochs. 
+
+% KL8:
+% tetinfo has 21 epochs
+
+% BG1:
+% rippletime missing
+
+% JS14:
+% eeg01-03-22 missing
+%
+% rippletime missing
+
+% JS17:
+% rippletime missing
+% sleep missing
+
+% JS21:
+% rippletime missing
+% sleep missing
+
+% JS34:
+% rippletime missing
+% cellinfo, sleep, sws, rem have 19 epochs
+
+
+% So the only animals with rippletime files are ER1_NEW, KL8, and JS15.
 
 
 %% Load data
