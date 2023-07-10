@@ -492,7 +492,7 @@ legend("sleep","wake")
 
 subplot(2,2,3)
 hold on;
-title("Sleep")
+title("Sleep Firing Rates")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
 h_CA1 = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
@@ -503,7 +503,7 @@ legend("CA1","PFC")
 
 subplot(2,2,4)
 hold on;
-title("Wake")
+title("Wake Firing Rates")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
 h_CA1 = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
@@ -586,8 +586,5 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 
 
 %% Now I want to split the firing rates into the groups that Aanchal did:
-% On track, wake during sleep sessions, NREM, and REM.
-
-
-
+% Wake, on track, NREM, and REM.
 
