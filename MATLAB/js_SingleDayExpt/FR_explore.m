@@ -13,18 +13,18 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
-% Common filetypes: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetype = {'cellinfo','sleep01','waking01','sws01','rem01','rippletime01'};
+% Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
+filetypes = {'spikes01','sleep01','waking01','sws01','rem01','rippletime01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
-% order as the elements in filetype.
+% order as the elements in filetypes.
 
 disp("Loading new animal data... ")
 for r = 1:length(load_rats)
     fprintf("Loaded animal: %s \n",load_rats{r})
 
-    for ft = 1:length(filetype)    
+    for ft = 1:length(filetypes)    
 
         short_name = load_rats{r};
         chop_idx = strfind(load_rats{r},'_') - 1;
@@ -34,13 +34,13 @@ for r = 1:length(load_rats)
         end
 
         % Does not load from EEG folder
-        File_dir = dir(data_dir+"/"+load_rats(r)+'_direct'+"/"+short_name+filetype{ft}+"*");
+        File_dir = dir(data_dir+"/"+load_rats(r)+'_direct'+"/"+short_name+filetypes{ft}+"*");
     
         if isempty(File_dir)
-            error("%s file does not exist for animal: %s \n",filetype{ft},load_rats{r})
+            error("%s file does not exist for animal: %s \n",filetypes{ft},load_rats{r})
         elseif length(File_dir) > 1
             error("More than one file detected when searching for: %s, in animal: %s \n" + ...
-                "Change names in filetype to be more specific.", filetype{ft},load_rats{r});
+                "Change names in filetypes to be more specific.", filetypes{ft},load_rats{r});
         else
             file = struct2cell(load(string(fullfile(File_dir.folder, File_dir.name)))); % load data
             file = file{:};
@@ -56,13 +56,13 @@ C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
 % load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 % 
 % % Mean firing rate data for each nrn is held in the cellinfo file.
-% filetype = {'cellinfo'};
+% filetypes = {'cellinfo'};
 % 
 % C_alldata = {}; % Cell array to hold data for each rat
 % 
 % for i = 1:length(load_rats)
 % 
-%     File_dir = dir(data_dir+"/"+load_rats(i)+'_direct'+"/*"+filetype(1)+"*");
+%     File_dir = dir(data_dir+"/"+load_rats(i)+'_direct'+"/*"+filetypes(1)+"*");
 %     % There should only be one cellinfo file per animal
 %     if isempty(File_dir)
 %         error("cellinfo file does not exist for animal: %s \n",load_rats{i})
@@ -633,6 +633,113 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 
 %% Now I want to split the firing rates into the groups that Aanchal did:
 % On track, wake during sleep sessions, NREM, and REM.
+% Because cellinfo just holds the mean rate for a cell during an entire
+% epoch, I can't use this to evaluate sleep states. Instead I need to use
+% the spiking data for each cell, split it by sleep state, and take the
+% mean during all instances of that state in an epoch. What I want is to
+% come up with a matrix like that used above, where each column is an epoch
+% and cell spiking data is held in the rows. It would be nice to set it up
+% so that each row represents a cell that is consistent across epochs. 
+
+% I did a check: the number of tetrodes used to detect spikes varies
+% between animals, even between the 32-tetrode ones. This is likely because
+% some tetrodes stopped working, or were used for other purposes. The
+% actual number of tetrodes in data files like spikes01 varies between about 29
+% and 32 for the 32-tetrode animals. 
+% Also, thankfully the data processing pipeline keeps a consistent number
+% of cells listed on each tetrode across epochs. Even though some neurons
+% are lost or gained over the course of the epochs, those neurons just have
+% an empty array as a placeholder. This means that cell identity is
+% maintained as the column under each tetrode across epochs. This is useful
+% because now I can know the size of the matrices I need to make with
+% number of cells as the first dimension, and this will be consistent
+% across epochs, so I can use epochs as the second dimension.
+
+spikes_idx = find(contains(filetypes,'spikes01')); % Gets row index of spike data in C_alldata.
+% Note that indexing like this is only supposed to give one index as a
+% result.
+sleep_idx = find(contains(filetypes,'sleep01'));
+waking_idx = find(contains(filetypes,'waking01'));
+sws_idx = find(contains(filetypes,'sws01'));
+rem_idx = find(contains(filetypes,'rem01'));
+rippletime_idx = find(contains(filetypes,'rippletime01'));
+
+% Extract correct data from C_alldata:
+C_allspikes = C_alldata(spikes_idx,:);
+C_allsleep = C_alldata(sleep_idx,:);
+C_allwaking = C_alldata(waking_idx,:);
+C_allsws = C_alldata(sws_idx,:);
+C_allrem = C_alldata(rem_idx,:);
+C_allrippletime = C_alldata(rippletime_idx,:);
+
+
+% Getting the "on track" data is the easiest, because it is just the even
+% epochs. I am going to call it "behavior" instead of "on track".
+
+behM = []; % Matrix to hold spike rates during behavior. Rows are neuron identity,
+% columns are epochs. This is for all rats.
+
+for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
+    
+    % Creates a matrix to hold spike rate data for one rat. Dims (num nrns)
+    % x (num epochs). The first epoch is used to find the number of nrns
+    % because this does not change across epochs as stated above.
+    ratRates = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
+
+    for e = 1:length(C_allspikes{1,r})
+        
+        nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn data from all tets.
+        length(nrnsAlltets)
+            
+        for nrn = 1:length(nrnsAlltets)
+
+            % isfield returns false if the struct does not exist
+            if isfield(nrnsAlltets{nrn},'meanrate')
+                % Assigns mean firing rate to matrix. Matrix is already
+                % filled with NaN, so neurons on a tetrode that aren't
+                % there are left with NaN.
+                ratRates(nrn,e) = nrnsAlltets{nrn}.meanrate;
+
+            end
+
+
+     
+        end
+    end
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%%
+
+r = 9;
+numnrnMat = [];
+    for e = 1:length(C_allspikes{1,r})
+        for tet = 1:length(C_allspikes{1,r}{1,e})
+
+            numnrnMat(tet,e) = length(C_allspikes{1,r}{1,e}{1,tet});
+
+        end
+    end
+
+
+nrnMean = mean(numnrnMat,2);
+
+oneepoch = [C_allspikes{1,r}{1,1}{:}];
+
+
 
 
 
