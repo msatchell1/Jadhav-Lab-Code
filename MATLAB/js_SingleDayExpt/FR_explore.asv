@@ -355,7 +355,7 @@ end
 
 % Get a list of the number of epochs across animals.
 epochcounts = zeros([1,length(C_alldata)]);
-for a = 1:length(C_alldata)
+for a = 1:size(C_alldata,2)
     epochcounts(a) = length(C_alldata{1,a});
 end
 
@@ -364,7 +364,7 @@ end
 CA1_allrates = {}; PFC_allrates = {};
 
 % Loop all animals
-for a = 1:length(C_alldata)
+for a = 1:size(C_alldata,2)
 
 
     ratdata = C_alldata{1,a};

@@ -14,7 +14,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common filetypes: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetype = {'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'};
+filetype = {'cellinfo','sleep01','waking01','sws01','rem01','rippletime01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -50,6 +50,8 @@ for r = 1:length(load_rats)
     end
 end
 
+C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
+
 
 % load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 % 
@@ -80,6 +82,8 @@ end
 
 
 %% Plot mean and median of mean firing rates for one rat
+% NOTE THE CODE BELOW ONLY WORKS WHEN 'cellinfo' IS THE FIRST ITEM IN
+% filetypes.
 
 % animalnum = 2;
 % ratdata = C_alldata{1,animalnum}; % this works for any animal by just indexing the animalnum into C_alldata.
@@ -355,7 +359,7 @@ end
 
 % Get a list of the number of epochs across animals.
 epochcounts = zeros([1,length(C_alldata)]);
-for a = 1:length(C_alldata)
+for a = 1:size(C_alldata,2)
     epochcounts(a) = length(C_alldata{1,a});
 end
 
@@ -364,7 +368,7 @@ end
 CA1_allrates = {}; PFC_allrates = {};
 
 % Loop all animals
-for a = 1:length(C_alldata)
+for a = 1:size(C_alldata,2)
 
 
     ratdata = C_alldata{1,a};
@@ -455,7 +459,7 @@ sleep_inds = 1:2:size(CA1_1a_mean,2);
 wake_inds = 2:2:size(CA1_1a_mean,2);
 
 figure;
-sgtitle(sprintf("1a Mean Firing Rates Across %d Animals",length(load_rats)));
+sgtitle(sprintf("Mean Firing Rates Across All Neurons From %d Animals",length(load_rats)));
 
 subplot(1,2,1)
 hold on;
