@@ -658,85 +658,158 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 spikes_idx = find(contains(filetypes,'spikes01')); % Gets row index of spike data in C_alldata.
 % Note that indexing like this is only supposed to give one index as a
 % result.
-sleep_idx = find(contains(filetypes,'sleep01'));
-waking_idx = find(contains(filetypes,'waking01'));
-sws_idx = find(contains(filetypes,'sws01'));
-rem_idx = find(contains(filetypes,'rem01'));
-rippletime_idx = find(contains(filetypes,'rippletime01'));
 
-% Extract correct data from C_alldata:
+% List of all states to sort the spike data into. Note that adding
+% rippletime01 adds quite a bit of calculation time. 
+stateNames = {'sleep','waking','sws','rem'};
+for s = 1:length(stateNames)
+    states_idx(s) = find(contains(filetypes, stateNames{s}));
+end
+
+% Extract spike data
 C_allspikes = C_alldata(spikes_idx,:);
-C_allsleep = C_alldata(sleep_idx,:);
-C_allwaking = C_alldata(waking_idx,:);
-C_allsws = C_alldata(sws_idx,:);
-C_allrem = C_alldata(rem_idx,:);
-C_allrippletime = C_alldata(rippletime_idx,:);
+
+% Try putting it all in one cell array instead. The order of the data
+% stored in rows is that of stateNames.
+C_allstates = C_alldata(states_idx,:);
 
 
 % Getting the "on track" data is the easiest, because it is just the even
 % epochs. I am going to call it "behavior" instead of "on track".
 
-FRall = []; % Matrix to hold spike rates during behavior. Rows are neuron identity,
-% columns are epochs. This is for all rats.
+% Matrix to hold mean spike rates by epoch, not discriminating by state. 
+% Rows are neuron identity, columns are epochs. This is for all rats.
+FR_byEpoch = [];
 
 for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
-    
+
     % Creates a matrix to hold spike rate data for one rat. Dims (num nrns)
     % x (num epochs). The first epoch is used to find the number of nrns
     % because this does not change across epochs as stated above.
     ratRates = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
 
     for e = 1:length(C_allspikes{1,r})
-        
+
         nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn data from all tets.
-            
+
         for nrn = 1:length(nrnsAlltets)
 
             % isfield returns false if the struct does not exist
             if isfield(nrnsAlltets{nrn},'meanrate')
-                % Assigns mean firing rate to matrix. Matrix is already
-                % filled with NaN, so neurons on a tetrode that aren't
-                % there are left with NaN.
-                ratRates(nrn,e) = nrnsAlltets{nrn}.meanrate;
+                % For state specific rates, we need to loop through the
+                % instances of a specific state and count the number of spikes
+                % that fall into that instance. I checked and confirmed
+                % that this result matches the .meanrate field for each
+                % nrn (only off by 0.0001 for some nrns).
+                ratRates(nrn,e) = size(nrnsAlltets{nrn}.data,1)/(nrnsAlltets{nrn}.timerange(2)-nrnsAlltets{nrn}.timerange(1));
 
-            end 
+            end
         end
     end
+    FR_byEpoch = [FR_byEpoch; ratRates]; 
+end
 
-    FRall = [FRall; ratRates];
 
+
+% Gets epochs that have data for all states. For most states this should be all odd
+% epochs for the data I am sorting here, because all the states
+% happen during the sleep epochs except for rippletimes. I will detect non-empty
+% epochs for generality.
+nonemptyEpochs = zeros(size(C_allstates,1),length(C_allstates{1,r}));
+for s = 1:size(C_allstates,1)
+    nonemptyEpochs(s,:) = ~cellfun(@isempty, C_allstates{s,r});
+end
+
+
+FR_allStates = cell(size(C_allstates,1),1);
+% Main loop to calculate mean firing rate for all states.
+for s = 1:size(C_allstates,1)
+
+    % Gets epochs that have data for this state. This should be identical across rats.
+    nonempty = zeros(1,length(C_allstates{1,1}));
+
+    for r = 1:size(C_allstates,2) 
+        % Indicates which epochs contain data
+        nonempty(1,:) = ~cellfun(@isempty, C_allstates{s,r});
+        % To hold mean firing rate data across all epochs for a single rat.
+        ratMeans = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
+
+        for e = 1:length(C_allstates{s,r})
+            
+            if nonempty(1,e) == 1
+            % Now the real deal. For every non-empty epoch, each state type (rem, rippletime,
+            % sleep, sws, and waking) will loop through the times
+            % that that state occurs, counting the number of spikes
+            % that occur during the duration of that occurance. In the end
+            % these spike counts will be summed up and divided by the
+            % total duration of that state to get the mean rate.
+            
+            epochData = C_allstates{s,r}{1,e}; % Data on a single rat, state, and epoch.
+            nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets.
+            STs_inState = cell(1,length(nrnsAlltets)); % Cell of spike times that occur within the given state.
+            % Columns are neurons.
+
+            for o = 1:size(epochData.starttime,1) % Loop through occurances of that state.
+
+                for nrn = 1:length(nrnsAlltets)
+
+                    % isfield returns false if the struct does not exist
+                    if isfield(nrnsAlltets{nrn},'data') && ~isempty(nrnsAlltets{nrn}.data)
+        
+                        STs = nrnsAlltets{nrn}.data(:,1); % Time of all spikes for that nrn.
+
+                        % Logical 1s and 0s determining if spikes fall within the state occurance window.
+                        inOcc = (epochData.starttime(o) <= STs) & (STs <= epochData.endtime(o));
+                        % Appends data from occurance to the state.
+                        STs_inState{1,nrn} = [STs_inState{1,nrn}; STs(inOcc)];
+    
+                    end
+                end
+            end
+                
+            % Now that spikes have been collected for each nrn for all
+            % occurances of the state, the mean rates for that state are calculated.
+            % This means dividing the number of spikes by the total
+            % duration of the state.
+            
+            stateDur = sum(epochData.endtime - epochData.starttime);  % Total time spent in state.
+            FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
+            for nrn = 1:size(STs_inState,2)
+                if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
+                    meanFR = length(STs_inState{1,nrn})/stateDur; % Calculate mean firing rate
+                    FRmeans(1,nrn) =  meanFR;
+                end
+            end
+             
+            ratMeans(:,e) = FRmeans; % Stores all FR means for that epoch.
+           
+            end
+        end
+
+        FR_allStates{s,1} = [FR_allStates{s,1}; ratMeans];
+
+    end
 end
 
 
 
 
+%% Plot the rates as distributions
 
 
 
+figure;
+sgtitle("Mean FR Distributions During Sleep Epochs")
+faceColors = [];
+for s = 1:size(FR_allStates,1)
+    
+    ti
+    edges = linspace(0, max(FR_allStates{s},[],'all'), 10*sqrt(sum(~isnan(FR_allStates{s}),'all')));
+    subplot(2,ceil(size(FR_allStates,1)/2),s)
+    hold on;
+    h = FR_allStates{s}(~isnan(FR_allStates{s})), edges);
 
 
-
-
-
-
-
-
-%%
-
-r = 9;
-numnrnMat = [];
-    for e = 1:length(C_allspikes{1,r})
-        for tet = 1:length(C_allspikes{1,r}{1,e})
-
-            numnrnMat(tet,e) = length(C_allspikes{1,r}{1,e}{1,tet});
-
-        end
-    end
-
-
-nrnMean = mean(numnrnMat,2);
-
-oneepoch = [C_allspikes{1,r}{1,1}{:}];
 
 
 
