@@ -676,7 +676,7 @@ C_allrippletime = C_alldata(rippletime_idx,:);
 % Getting the "on track" data is the easiest, because it is just the even
 % epochs. I am going to call it "behavior" instead of "on track".
 
-behM = []; % Matrix to hold spike rates during behavior. Rows are neuron identity,
+FRall = []; % Matrix to hold spike rates during behavior. Rows are neuron identity,
 % columns are epochs. This is for all rats.
 
 for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
@@ -689,7 +689,6 @@ for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
     for e = 1:length(C_allspikes{1,r})
         
         nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn data from all tets.
-        length(nrnsAlltets)
             
         for nrn = 1:length(nrnsAlltets)
 
@@ -700,12 +699,12 @@ for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
                 % there are left with NaN.
                 ratRates(nrn,e) = nrnsAlltets{nrn}.meanrate;
 
-            end
-
-
-     
+            end 
         end
     end
+
+    FRall = [FRall; ratRates];
+
 end
 
 
