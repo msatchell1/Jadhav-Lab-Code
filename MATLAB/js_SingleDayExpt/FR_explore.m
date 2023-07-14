@@ -845,7 +845,7 @@ end
 
 % Plot the rates as distributions
 
-stateFig = figure;
+stateHistF = figure;
 sgtitle("Mean FR Distributions During Sleep Epochs")
 faceColors = [];
 for s = 1:size(FR_allStates,1)
@@ -860,7 +860,7 @@ for s = 1:size(FR_allStates,1)
     xlabel("Firing Rate (Hz)")
     legend(brainAreas)
 end
-linkaxes(findobj(stateFig,'Type','axes'), 'x');
+linkaxes(findobj(stateHistF,'Type','axes'), 'x');
 
 
 behEpochs = 2:2:size(FR_byEpoch{1},2);
@@ -900,5 +900,54 @@ linkaxes([axbeh,axsleep],'x');
 
 
 
+%% Plot rates by epoch and state
+stateEpochF = figure;
+sgtitle("Mean FR Across Epochs")
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]}; % Color of data, will be plotted with stateNames order.
+for a = 1:size(FR_allStates,2)
+   
+    subplot(1,size(FR_allStates,2),a)
+    hold on;
 
+    for s = 1:size(FR_allStates,1)
+        % Calculate mean firing rate, standard deviation, and SEM values for
+        % each sleep epoch.
+        FRmeans = mean(FR_allStates{s,a},1,'omitnan');
+        FRstds = std(FR_allStates{s,a},0,1,'omitnan');
+        numnrns = sum(~isnan(FR_allStates{s,a}),1);
+        FRsems = FRstds./sqrt(numnrns);
+        
+        FR_CIs = zeros(2,size(FRmeans,2));
+        CI_pct = 75; % Confidence interval value in percent.
+        for e = 1:size(FRmeans,2)
+            temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+            FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+        end
+
+        errorbar(sleepEpochs,FRmeans(sleepEpochs),FR_CIs(1,sleepEpochs),FR_CIs(2,sleepEpochs),...
+            ".", Color=colors{s})
+        plot(sleepEpochs,FRmeans(sleepEpochs), Color=colors{s}, LineWidth=2, HandleVisibility='off')
+    end
+    
+    % Doing the same for wake epochs.
+    FRmeans = mean(FRbeh{1,a},1,'omitnan');
+    FRstds = std(FRbeh{1,a},0,1,'omitnan');
+    numnrns = sum(~isnan(FRbeh{1,a}),1);
+    FRsems = FRstds./sqrt(numnrns);
+    FR_CIs = zeros(2,size(FRmeans,2));
+    for e = 1:size(FRmeans,2)
+            temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+            FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+    end
+
+    errorbar(behEpochs,FRmeans,FR_CIs(1,:),FR_CIs(2,:),...
+            ".", Color=[0.3 0.9 0])
+    plot(behEpochs,FRmeans, Color=[0.3 0.9 0], LineWidth=2, HandleVisibility='off')
+
+    title(brainAreas{a})
+    ylabel("Mean Firing Rate (Hz)")
+    xlabel("Epoch")
+    L = legend([stateNames,"beh"]);
+
+end
 

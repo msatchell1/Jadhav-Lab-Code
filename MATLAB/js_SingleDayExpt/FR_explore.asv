@@ -15,7 +15,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'cellinfo','spikes01'};
+filetypes = {'cellinfo','spikes01','sleep01','waking01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -671,9 +671,12 @@ end
 % List of all states to sort the spike data into. Note that adding
 % rippletime01 adds quite a bit of calculation time. 
 stateNames = {'sleep','waking','sws','rem'};
-for s = 1:length(stateNames)
-    states_idx(s) = find(contains(filetypes, stateNames{s}));
-end
+
+states_idx = find(contains(filetypes, stateNames));
+
+% for s = 1:length(stateNames)
+%     states_idx(s) = find(contains(filetypes, stateNames{s}));
+% end
 if isempty(states_idx)
     error("at least one of the following sleep state data must be loaded: \n +" + ...
         "   sleep01, waking01, sws01, rem01, or rippletime01.")
@@ -842,7 +845,7 @@ end
 
 % Plot the rates as distributions
 
-stateFig = figure;
+stateHistF = figure;
 sgtitle("Mean FR Distributions During Sleep Epochs")
 faceColors = [];
 for s = 1:size(FR_allStates,1)
@@ -857,7 +860,7 @@ for s = 1:size(FR_allStates,1)
     xlabel("Firing Rate (Hz)")
     legend(brainAreas)
 end
-linkaxes(findobj(stateFig,'Type','axes'), 'x');
+linkaxes(findobj(stateHistF,'Type','axes'), 'x');
 
 
 behEpochs = 2:2:size(FR_byEpoch{1},2);
@@ -876,8 +879,8 @@ sgtitle("Mean FR Distributions by Epoch Type")
 axbeh = subplot(1,2,1);
 hold on;
 edges = linspace(0, max(FRbeh{1},[],'all'), 10*sqrt(sum(~isnan(FRbeh{1}),'all')));
-hCA1 = histogram(FRbeh{1}(~isnan(FRbeh{1})), edges);
-hPFC = histogram(FRbeh{2}(~isnan(FRbeh{2})), edges);
+histogram(FRbeh{1}(~isnan(FRbeh{1})), edges);
+histogram(FRbeh{2}(~isnan(FRbeh{2})), edges);
 title("Behavior (even epochs)")
 ylabel("Counts")
 xlabel("Firing Rate (Hz)")
@@ -886,8 +889,8 @@ legend(brainAreas)
 axsleep = subplot(1,2,2);
 hold on;
 edges = linspace(0, max(FRsleep{1},[],'all'), 10*sqrt(sum(~isnan(FRsleep{1}),'all')));
-hCA1 = histogram(FRsleep{1}(~isnan(FRsleep{1})), edges);
-hPFC = histogram(FRsleep{2}(~isnan(FRsleep{2})), edges);
+histogram(FRsleep{1}(~isnan(FRsleep{1})), edges);
+histogram(FRsleep{2}(~isnan(FRsleep{2})), edges);
 title("Sleep (odd epochs)")
 ylabel("Counts")
 xlabel("Firing Rate (Hz)")
@@ -897,6 +900,69 @@ linkaxes([axbeh,axsleep],'x');
 
 
 
+%% Plot rates by epoch and state
+stateEpochF = figure;
+sgtitle("Mean FR Across Epochs")
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]}; % Color of data, will be ordered to match stateNames order.
+for a = 1:size(FR_allStates,2)
+   
+    subplot(1,size(FR_allStates,2),a)
+    hold on;
 
+    for s = 1:size(FR_allStates,1)
+        % Calculate mean firing rate, standard deviation, and SEM values for
+        % each epoch.
+        FRmeans = mean(FR_allStates{s,a},1,'omitnan');
+        FRstds = std(FR_allStates{s,a},0,1,'omitnan');
+        numnrns = sum(~isnan(FR_allStates{s,a}),1);
+        FRsems = FRstds./sqrt(numnrns);
+        
+        FR_CIs = zeros(2,size(FRmeans,2));
+        CI_pct = 75; % Confidence interval value in percent.
+        for e = 1:size(FRmeans,2)
+            temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+            FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+        end
 
-% I NEED TO SPLIT THESE INTO CA1 AND PFC
+        errorbar(sleepEpochs,FRmeans(sleepEpochs),FR_CIs(1,sleepEpochs),FR_CIs(2,sleepEpochs),...
+            Color=colors{s})
+    end
+    
+    FRmeans = mean(FRbeh{1,a},1,'omitnan');
+    FRstds = std(FRbeh{1,a},0,1,'omitnan');
+    numnrns = sum(~isnan(FRbeh{1,a}),1);
+    FRsems = FRstds
+    errorbar(wakeEpochs,FRbeh(sleepEpochs),FR_CIs(1,sleepEpochs),FR_CIs(2,sleepEpochs),...
+            Color=colors{s})
+
+    title(brainAreas{a})
+    ylabel("Mean Firing Rate (Hz)")
+    xlabel("Epoch")
+    legend(stateNames)
+
+end
+
+%%
+
+errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_CI(1,wake_inds), CA1_1a_CI(2,wake_inds), ...
+    'o', Color=[0 0.4470 0.7410])
+
+CA1_1a_std = std(CA1_1a,0,1,'omitnan'); % Std across animals
+PFC_1a_std = std(PFC_1a,0,1,'omitnan');
+
+CA1_1a_SEM = CA1_1a_std./sqrt(CA1_numnrns);
+PFC_1a_SEM = PFC_1a_std./sqrt(PFC_numnrns);
+CA1_1a_CI = zeros(2,size(CA1_1a_mean,2)); % Note size(CA1_1a_mean,2) is the number of epochs
+PFC_1a_CI = zeros(2,size(CA1_1a_mean,2));
+
+CI_val = 75; % Confidence interval to be used in %.
+
+for e = 1:size(CA1_1a_mean,2)
+    % CI from a normal? distribution with N-1 data points
+    temp_CI_CA1 = tinv([(1-CI_val/100)/2, 1-(1-CI_val/100)/2], CA1_numnrns(1,e)-1); 
+    temp_CI_PFC = tinv([(1-CI_val/100)/2, 1-(1-CI_val/100)/2], PFC_numnrns(1,e)-1);
+
+    % multiplying this CI by the SEM to get the error size
+    CA1_1a_CI(:,e) = bsxfun(@times, CA1_1a_SEM(e), temp_CI_CA1(:));
+    PFC_1a_CI(:,e) = bsxfun(@times, PFC_1a_SEM(e), temp_CI_PFC(:));
+end
