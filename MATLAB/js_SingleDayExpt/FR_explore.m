@@ -488,7 +488,7 @@ legend("sleep","wake");
 
 
 
-%% Using the same matrices that hold all this data, plot histograms for CA1
+% Using the same matrices that hold all this data, plot histograms for CA1
 % and PFC split into sleep and wake
 CA1_1a_sleep = CA1_1a(:,sleep_inds); PFC_1a_sleep = PFC_1a(:,sleep_inds);
 CA1_1a_srv = CA1_1a_sleep(~isnan(CA1_1a_sleep)); % sleep rate vector of all neurons.
@@ -561,7 +561,7 @@ legend("CA1","PFC")
 
 
 
-%% Cumulative histograms
+% Cumulative histograms
 
 % Shantanu wants me to plot the histograms above, but in cumulative
 % distributions.
@@ -591,6 +591,7 @@ txt = sprintf("pval = %.3d",pval_CA1);
 text(CA1s_cdf.XData(end-1)*(2/4), 1/4, txt) % cdf line.XData has +- inf at
 % the ends of the array, so to get the maximum plotted value index to
 % end-1.
+set(gca,'XScale','log');
 
 subplot(2,2,2)
 hold on;
@@ -604,6 +605,7 @@ xlabel("Firing Rate (Hz)")
 legend("sleep","wake",Location='best')
 txt = sprintf("pval = %.3d",pval_PFC);
 text(PFCs_cdf.XData(end-1)*(2/4), 1/4, txt);
+set(gca,'XScale','log');
 
 subplot(2,2,3)
 hold on;
@@ -617,6 +619,7 @@ xlabel("Firing Rate (Hz)")
 legend("CA1","PFC",Location='best')
 txt = sprintf("pval = %.3d",pval_sleep);
 text(CA1s_cdf.XData(end-1)*(2/4), 1/4, txt);
+set(gca,'XScale','log');
 
 subplot(2,2,4)
 hold on;
@@ -630,10 +633,12 @@ xlabel("Firing Rate (Hz)")
 legend("CA1","PFC",Location='best')
 txt = sprintf("pval = %.3d",pval_wake);
 text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
+set(gca,'XScale','log');
 
 
-%% Split the firing rates into the following states and plot them:
+%% Split the firing rates into the following states:
 % Behavior(on track), wake during sleep sessions, sleep, NREM, and REM.
+
 % Because cellinfo just holds the mean rate for a cell during an entire
 % epoch, I can't use this to evaluate sleep states. Instead I need to use
 % the spiking data for each cell, split it by sleep state, and take the
@@ -670,6 +675,9 @@ end
 
 % List of all states to sort the spike data into. Note that adding
 % rippletime01 adds quite a bit of calculation time. 
+% WARNING: This does not change the order of how these states are stored in
+% C_allstates or later FR_allStates. Thus, stateNames MUST MATCH ORDER
+% THESE FILES ARE LISTED IN filetypes.
 stateNames = {'sleep','waking','sws','rem'};
 
 states_idx = find(contains(filetypes, stateNames));
@@ -757,19 +765,32 @@ for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
     end
 end
 
+% Separating into sleep and behavior epoch data.
+behEpochs = 2:2:size(FR_byEpoch{1},2);
+sleepEpochs = 1:2:size(FR_byEpoch{1},2);
+FRbeh = {}; FRsleep = {};
+for a = 1:size(FR_byEpoch,2)
+    FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
+    FRsleep{a} = FR_byEpoch{a}(:,sleepEpochs);
+end
 
 
 % Gets epochs that have data for all states. For most states this should be all odd
 % epochs for the data I am sorting here, because all the states
 % happen during the sleep epochs except for rippletimes. I will detect non-empty
-% epochs for generality.
-nonemptyEpochs = zeros(size(C_allstates,1),length(C_allstates{1,r}));
+% epochs for generality. Note this assumes all rats have the same number of
+% epochs as rat 1, which should be true when clip_17_epochs.m has been
+% used on C_allstates.
+nonemptyEpochs = zeros(size(C_allstates,1),length(C_allstates{1,1}));
 for s = 1:size(C_allstates,1)
-    nonemptyEpochs(s,:) = ~cellfun(@isempty, C_allstates{s,r});
+    nonemptyEpochs(s,:) = ~cellfun(@isempty, C_allstates{s,1});
 end
 
 
+% To hold firing rates for all states held in C_allstates
 FR_allStates = cell(size(C_allstates,1),length(brainAreas));
+% Time duration of states by epoch. (num rats) x (num states) x (num epochs).
+Dur_allStates = zeros(size(C_allstates,2),size(C_allstates,1),size(nonemptyEpochs,2)); 
 % Main loop to calculate mean firing rate for all states in all brain areas.
 for a = 1:length(brainAreas)
 
@@ -824,6 +845,7 @@ for a = 1:length(brainAreas)
                 % duration of the state.
                 
                 stateDur = sum(epochData.endtime - epochData.starttime);  % Total time spent in state.
+                Dur_allStates(r,s,e) = stateDur;
                 FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
                 for nrn = 1:size(STs_inState,2)
                     if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
@@ -837,17 +859,20 @@ for a = 1:length(brainAreas)
                 end
             end
             FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];   
+            
         end
     end
 end
 
 
 
-% Plot the rates as distributions
 
+
+%% Plot the rates as distributions
 stateHistF = figure;
 sgtitle("Mean FR Distributions During Sleep Epochs")
 faceColors = [];
+
 for s = 1:size(FR_allStates,1)
    
     edges = linspace(0, max(FR_allStates{s},[],'all'), 10*sqrt(sum(~isnan(FR_allStates{s}),'all')));
@@ -863,16 +888,35 @@ end
 linkaxes(findobj(stateHistF,'Type','axes'), 'x');
 
 
-behEpochs = 2:2:size(FR_byEpoch{1},2);
-sleepEpochs = 1:2:size(FR_byEpoch{1},2);
-FRbeh = {}; FRsleep = {};
-for a = 1:size(FR_byEpoch,2)
-    FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
-    FRsleep{a} = FR_byEpoch{a}(:,sleepEpochs);
+
+% Plot the CDF for each brain region together
+stateCDFF = figure;
+sgtitle("Cumulative Histogram Curves Separated by Sleep State (Sleep Epochs Only)")
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]};
+
+for a = 1:size(FR_allStates,2)
+
+    subplot(1,size(FR_allStates,2),a)
+    hold on;
+    % Plot all sleep states
+    for s = 1:size(FR_allStates,1)
+        cdf = cdfplot(FR_allStates{s,a}(~isnan(FR_allStates{s,a})));
+        cdf.Color = colors{s}; cdf.LineWidth=2;
+    end
+    % Plot behavior
+    cdf = cdfplot(FRbeh{1,a}(~isnan(FRbeh{1,a})));
+    cdf.Color = [0.3 0.9 0]; cdf.LineWidth=2;
+
+    set(gca,'XScale','log');
+    title(brainAreas{a})
+    xlabel("Firing Rate (Hz)")
+    ylabel("Fraction of Neurons")
+    legend([stateNames,"beh"],Location='best')
+
 end
 
 
-
+% Histograms of all data from behavior or sleep epochs.
 figure;
 sgtitle("Mean FR Distributions by Epoch Type")
 
@@ -900,7 +944,11 @@ linkaxes([axbeh,axsleep],'x');
 
 
 
-%% Plot rates by epoch and state
+
+
+
+
+% Plot rates by epoch and state
 stateEpochF = figure;
 sgtitle("Mean FR Across Epochs")
 colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]}; % Color of data, will be plotted with stateNames order.
@@ -951,3 +999,20 @@ for a = 1:size(FR_allStates,2)
 
 end
 
+
+% Plot time duration of states across epochs
+figure;
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]}; % Color of data, will be plotted with stateNames order.
+hold on;
+
+DurMean = squeeze(mean(Dur_allStates,1,'omitnan')); % Take the mean across all rats. Remove dims of length 1
+DurStd = squeeze(std(Dur_allStates,0,1,'omitnan'));
+
+for s = 1:size(DurMean,1)
+    errorbar(sleepEpochs,DurMean(s,sleepEpochs)./60, DurStd(s,sleepEpochs)./60, '.',Color=colors{s})
+    plot(sleepEpochs,DurMean(s,sleepEpochs)./60,Color=colors{s}, LineWidth=2, HandleVisibility='off')
+end
+title("Duration of States Across Animals (Sleep Epochs Only)")
+ylabel("Time in State (min)")
+xlabel("Epoch")
+legend(stateNames)
