@@ -1,11 +1,12 @@
 % This script will recreate some results that Aanchal got on looking at
 % firing rates of neurons in CA1 and PFC during awake and rest. It will
 % also explore firing rate statistics in general.
+%
 % Michael Satchell 07/03/2023
 
 
 %% Load data
-clear all;
+clearvars;
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % For this analysis I want to consider all rats, and all nrns on all

@@ -189,10 +189,10 @@ end
 FR_allStates = cell(size(C_allstates,1),length(brainAreas));
 % Time duration of states by epoch. (num rats) x (num states) x (num epochs).
 Dur_allStates = zeros(size(C_allstates,2),size(C_allstates,1),size(nonemptyEpochs,2)); 
-% All the start and end times of all occurances. (num states) x (num rats).
+% All the start and end times of all occurances. (num rats) x (num states).
 % Then within each cell are cells for each epoch, and within those is a 
 % (num occurances) x 2 matrix. Col 1 is starttimes, col 2 endtimes.
-Occ_allStates = cell(size(C_allstates,1),size(C_allstates,2));
+Occ_allStates = cell(size(C_allstates,2),size(C_allstates,1));
 
 % Main loop to calculate mean firing rate for all states in all brain areas.
 for a = 1:length(brainAreas)
@@ -207,8 +207,6 @@ for a = 1:length(brainAreas)
             nonempty(1,:) = ~cellfun(@isempty, C_allstates{s,r});
             % To hold mean firing rate data across all epochs for a single rat.
             ratMeans = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
-            % To hold state occurances for all epochs.
-            occEpochs = cell(1,length(C_allstates{s,r}));
     
             for e = 1:length(C_allstates{s,r})
                 
@@ -248,7 +246,7 @@ for a = 1:length(brainAreas)
                 % occurances of the state, the mean rates for that state are calculated.
                 % This means dividing the number of spikes by the total
                 % duration of the state.
-                occTimes = [epochData.starttime, epochData.endtime];
+                Occ = [epochData.starttime, epochData.endtime];
                 occDurs = epochData.endtime - epochData.starttime;
                 stateDur = sum(occDurs);  % Total time spent in state.
                 Dur_allStates(r,s,e) = stateDur;
@@ -261,12 +259,11 @@ for a = 1:length(brainAreas)
                 end
                  
                 ratMeans(:,e) = FRmeans; % Stores all FR means for that epoch.
-                occEpochs{1,e} = occTimes;
                
                 end
             end
             FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];    
-            Occ_allStates{s,r} = occEpochs;
+            Occ_allStates{r,s} = 
         end
     end
 end

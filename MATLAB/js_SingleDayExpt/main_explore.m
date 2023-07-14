@@ -147,6 +147,13 @@
 % matclust). In fact, he says that in CA1 there is a large shift in the
 % population of active cells between wake and sleep, such that many cells
 % are only active during waking epochs and others only during sleep. 
+%
+% linpos:
+% day / epoch
+% contains a struct with behvioral state information of the animal, i.e. information
+% about when the animal is running on the track. 'statematrix' holds most of
+% this data, including: time, linear velocity, linear distance,
+% trajectory, ...
 
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
