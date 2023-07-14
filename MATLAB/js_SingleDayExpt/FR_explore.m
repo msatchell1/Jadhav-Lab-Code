@@ -1,5 +1,5 @@
 % This script will recreate some results that Aanchal got on looking at
-% firing rates of neurons in CA1 and PFC during awake and sleep. It will
+% firing rates of neurons in CA1 and PFC during awake and rest. It will
 % also explore firing rate statistics in general.
 % Michael Satchell 07/03/2023
 
@@ -52,33 +52,6 @@ for r = 1:length(load_rats)
 end
 
 C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
-
-
-% load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
-% 
-% % Mean firing rate data for each nrn is held in the cellinfo file.
-% filetypes = {'cellinfo'};
-% 
-% C_alldata = {}; % Cell array to hold data for each rat
-% 
-% for i = 1:length(load_rats)
-% 
-%     File_dir = dir(data_dir+"/"+load_rats(i)+'_direct'+"/*"+filetypes(1)+"*");
-%     % There should only be one cellinfo file per animal
-%     if isempty(File_dir)
-%         error("cellinfo file does not exist for animal: %s \n",load_rats{i})
-%     elseif length(File_dir) > 1
-%         error("Only 1 file per animal expected. Number loaded for animal %s: %d \n", load_rats{i},lenth(File_dir))
-%     else
-%         file = struct2cell(load(string(fullfile(File_dir.folder, File_dir.name)))); % load data
-%         file = file{:};
-%         C_alldata{i} = file{1,1};
-%         fprintf("Loaded animal: %s      Num epochs: %d      Num cells: ~%d \n", load_rats{i},length(file{1,1}),length([file{1,1}{1,1}{:}]))
-%         % Note that the number of cells on a tetrode varies across the
-%         % epochs, so the number listed here is only an estimate based on
-%         % the first epoch.
-%     end
-% end
 
 
 
@@ -455,8 +428,8 @@ for e = 1:size(CA1_1a_mean,2)
     PFC_1a_CI(:,e) = bsxfun(@times, PFC_1a_SEM(e), temp_CI_PFC(:));
 end
 
-% Indices for sleep and wake
-sleep_inds = 1:2:size(CA1_1a_mean,2);
+% Indices for rest and wake
+rest_inds = 1:2:size(CA1_1a_mean,2);
 wake_inds = 2:2:size(CA1_1a_mean,2);
 
 figure;
@@ -467,32 +440,32 @@ hold on;
 title("CA1")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
-errorbar(sleep_inds, CA1_1a_mean(sleep_inds), CA1_1a_CI(1,sleep_inds),CA1_1a_CI(2,sleep_inds), ...
+errorbar(rest_inds, CA1_1a_mean(rest_inds), CA1_1a_CI(1,rest_inds),CA1_1a_CI(2,rest_inds), ...
     'o',Color=[0 0.4470 0.7410], MarkerFaceColor='blue')
 errorbar(wake_inds, CA1_1a_mean(wake_inds), CA1_1a_CI(1,wake_inds), CA1_1a_CI(2,wake_inds), ...
     'o', Color=[0 0.4470 0.7410])
-legend("sleep","wake");
+legend("rest","wake");
 
 subplot(1,2,2)
 hold on;
 title("PFC")
 ylabel("Mean Firing Rate (Hz)")
 xlabel("Epoch")
-errorbar(sleep_inds, PFC_1a_mean(sleep_inds), PFC_1a_CI(1,sleep_inds),PFC_1a_CI(2,sleep_inds), ...
+errorbar(rest_inds, PFC_1a_mean(rest_inds), PFC_1a_CI(1,rest_inds),PFC_1a_CI(2,rest_inds), ...
     'o',Color=[0.8500 0.3250 0.0980], MarkerFaceColor=[0.8500 0.3250 0.0580])
 errorbar(wake_inds, PFC_1a_mean(wake_inds), PFC_1a_CI(1,wake_inds),PFC_1a_CI(2,wake_inds), ...
     'o', Color=[0.8500 0.3250 0.0980])
-legend("sleep","wake");
+legend("rest","wake");
 
 
 
 
 
 % Using the same matrices that hold all this data, plot histograms for CA1
-% and PFC split into sleep and wake
-CA1_1a_sleep = CA1_1a(:,sleep_inds); PFC_1a_sleep = PFC_1a(:,sleep_inds);
-CA1_1a_srv = CA1_1a_sleep(~isnan(CA1_1a_sleep)); % sleep rate vector of all neurons.
-PFC_1a_srv = PFC_1a_sleep(~isnan(PFC_1a_sleep));
+% and PFC split into rest and wake. 
+CA1_1a_rest = CA1_1a(:,rest_inds); PFC_1a_rest = PFC_1a(:,rest_inds);
+CA1_1a_rrv = CA1_1a_rest(~isnan(CA1_1a_rest)); % rest rate vector of all neurons.
+PFC_1a_rrv = PFC_1a_rest(~isnan(PFC_1a_rest));
 
 % same for wake
 CA1_1a_wake = CA1_1a(:,wake_inds); PFC_1a_wake = PFC_1a(:,wake_inds);
@@ -500,13 +473,13 @@ CA1_1a_wrv = CA1_1a_wake(~isnan(CA1_1a_wake));
 PFC_1a_wrv = PFC_1a_wake(~isnan(PFC_1a_wake));
 
 % Define bin edges for histograms, using the number of bins to be the sqrt
-% of the smaller number of neurons between the wake and sleep sessions.
-CA1_edges = linspace(0, max(CA1_1a,[],'all'), 3*sqrt(min([length(CA1_1a_srv),length(CA1_1a_wrv)])));
-PFC_edges = linspace(0, max(PFC_1a,[],'all'), 3*sqrt(min([length(PFC_1a_srv),length(PFC_1a_wrv)])));
+% of the smaller number of neurons between the wake and rest sessions.
+CA1_edges = linspace(0, max(CA1_1a,[],'all'), 3*sqrt(min([length(CA1_1a_rrv),length(CA1_1a_wrv)])));
+PFC_edges = linspace(0, max(PFC_1a,[],'all'), 3*sqrt(min([length(PFC_1a_rrv),length(PFC_1a_wrv)])));
 
-% KS test between the sleep and wake distributions
-[~,pval_CA1] = kstest2(CA1_1a_srv,CA1_1a_wrv);
-[~,pval_PFC] = kstest2(PFC_1a_srv,PFC_1a_wrv);
+% KS test between the rest and wake distributions
+[~,pval_CA1] = kstest2(CA1_1a_rrv,CA1_1a_wrv);
+[~,pval_PFC] = kstest2(PFC_1a_rrv,PFC_1a_wrv);
 
 % Now plot histograms
 figure;
@@ -516,35 +489,35 @@ hold on;
 title("CA1")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
-h_CA1s = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.01 1]);
+h_CA1s = histogram(CA1_1a_rrv, CA1_edges, FaceColor=[0 0.01 1]);
 h_CA1w = histogram(CA1_1a_wrv, CA1_edges, FaceColor=[0 0.5 0.8]);
 txt = sprintf("pval = %d",pval_CA1);
 text(max(CA1_edges)/4,max(h_CA1s.BinCounts)/2, txt)
-legend("sleep","wake")
+legend("rest","wake")
 
 subplot(2,2,2)
 hold on;
 title("PFC")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
-h_PFCs = histogram(PFC_1a_srv, CA1_edges, FaceColor=[0.9 0.4 0]);
+h_PFCs = histogram(PFC_1a_rrv, CA1_edges, FaceColor=[0.9 0.4 0]);
 h_PFCw = histogram(PFC_1a_wrv, CA1_edges, FaceColor=[1 0.8 0]);
 txt = sprintf("pval = %d",pval_PFC);
 text(max(PFC_edges)/4,max(h_PFCs.BinCounts)/2, txt)
-legend("sleep","wake")
+legend("rest","wake")
 
-% Plot 4-tile sublot of combinations of CA1 and PFC in sleep and wake
-[~,pval_sleep] = kstest2(CA1_1a_srv,PFC_1a_srv);
+% Plot 4-tile sublot of combinations of CA1 and PFC in rest and wake
+[~,pval_rest] = kstest2(CA1_1a_rrv,PFC_1a_rrv);
 [~,pval_wake] = kstest2(CA1_1a_wrv,PFC_1a_wrv);
 
 subplot(2,2,3)
 hold on;
-title("Sleep")
+title("Rest")
 xlabel("Firing Rate (Hz)")
 ylabel("Counts")
-h_CA1 = histogram(CA1_1a_srv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
-h_PFC = histogram(PFC_1a_srv, CA1_edges, FaceColor=[0.8500 0.3250 0.0980]);
-txt = sprintf("pval = %d",pval_sleep);
+h_CA1 = histogram(CA1_1a_rrv, CA1_edges, FaceColor=[0 0.4470 0.7410]);
+h_PFC = histogram(PFC_1a_rrv, CA1_edges, FaceColor=[0.8500 0.3250 0.0980]);
+txt = sprintf("pval = %d",pval_rest);
 text(max(CA1_edges)/4,max(h_CA1.BinCounts)/2, txt)
 legend("CA1","PFC")
 
@@ -569,9 +542,9 @@ legend("CA1","PFC")
 % KS test between the CDFs. It turns out that the KS test of two samples is
 % computed by turning them into CDFs and measuring the maximal difference
 % between the two CDFs. So, I just need to hand kstest2 the data.
-[~,pval_CA1] = kstest2(CA1_1a_srv,CA1_1a_wrv);
-[~,pval_PFC] = kstest2(PFC_1a_srv,PFC_1a_wrv);
-[~,pval_sleep] = kstest2(CA1_1a_srv,PFC_1a_srv);
+[~,pval_CA1] = kstest2(CA1_1a_rrv,CA1_1a_wrv);
+[~,pval_PFC] = kstest2(PFC_1a_rrv,PFC_1a_wrv);
+[~,pval_rest] = kstest2(CA1_1a_rrv,PFC_1a_rrv);
 [~,pval_wake] = kstest2(CA1_1a_wrv,PFC_1a_wrv);
 
 figure;
@@ -579,14 +552,14 @@ sgtitle("Firing Rate CDFs")
 
 subplot(2,2,1)
 hold on;
-CA1s_cdf = cdfplot(CA1_1a_srv);
+CA1s_cdf = cdfplot(CA1_1a_rrv);
 CA1s_cdf.Color = [0 0.01 1];
 CA1w_cdf = cdfplot(CA1_1a_wrv);
 CA1w_cdf.Color=[0 0.5 0.8];
 title("CA1")
 ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
-legend("sleep","wake",Location='best')
+legend("rest","wake",Location='best')
 txt = sprintf("pval = %.3d",pval_CA1);
 text(CA1s_cdf.XData(end-1)*(2/4), 1/4, txt) % cdf line.XData has +- inf at
 % the ends of the array, so to get the maximum plotted value index to
@@ -595,29 +568,29 @@ set(gca,'XScale','log');
 
 subplot(2,2,2)
 hold on;
-PFCs_cdf = cdfplot(PFC_1a_srv);
+PFCs_cdf = cdfplot(PFC_1a_rrv);
 PFCs_cdf.Color = [0.9 0.4 0];
 PFCw_cdf = cdfplot(PFC_1a_wrv);
 PFCw_cdf.Color=[1 0.8 0];
 title("PFC")
 ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
-legend("sleep","wake",Location='best')
+legend("rest","wake",Location='best')
 txt = sprintf("pval = %.3d",pval_PFC);
 text(PFCs_cdf.XData(end-1)*(2/4), 1/4, txt);
 set(gca,'XScale','log');
 
 subplot(2,2,3)
 hold on;
-CA1s_cdf = cdfplot(CA1_1a_srv);
+CA1s_cdf = cdfplot(CA1_1a_rrv);
 CA1s_cdf.Color = [0 0.4470 0.7410];
-PFCs_cdf = cdfplot(PFC_1a_srv);
+PFCs_cdf = cdfplot(PFC_1a_rrv);
 PFCs_cdf.Color=[0.8500 0.3250 0.0980];
-title("Sleep")
+title("Rest")
 ylabel("Fraction of Neurons")
 xlabel("Firing Rate (Hz)")
 legend("CA1","PFC",Location='best')
-txt = sprintf("pval = %.3d",pval_sleep);
+txt = sprintf("pval = %.3d",pval_rest);
 text(CA1s_cdf.XData(end-1)*(2/4), 1/4, txt);
 set(gca,'XScale','log');
 
@@ -636,12 +609,12 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 set(gca,'XScale','log');
 
 
-%% Split the firing rates into the following states:
+%% Split the firing rates into the following states during rest epochs:
 % Behavior(on track), wake during sleep sessions, sleep, NREM, and REM.
 
 % Because cellinfo just holds the mean rate for a cell during an entire
-% epoch, I can't use this to evaluate sleep states. Instead I need to use
-% the spiking data for each cell, split it by sleep state, and take the
+% epoch, I can't use this to evaluate rest states. Instead I need to use
+% the spiking data for each cell, split it by rest state, and take the
 % mean during all instances of that state in an epoch. What I want is to
 % come up with a matrix like that used above, where each column is an epoch
 % and cell spiking data is held in the rows. It would be nice to set it up
@@ -686,7 +659,7 @@ states_idx = find(contains(filetypes, stateNames));
 %     states_idx(s) = find(contains(filetypes, stateNames{s}));
 % end
 if isempty(states_idx)
-    error("at least one of the following sleep state data must be loaded: \n +" + ...
+    error("at least one of the following rest state data must be loaded: \n +" + ...
         "   sleep01, waking01, sws01, rem01, or rippletime01.")
 end
 
@@ -765,19 +738,19 @@ for r = 1:length(C_allspikes) % Nested loops to get to each neuron.
     end
 end
 
-% Separating into sleep and behavior epoch data.
+% Separating into rest and behavior epoch data.
 behEpochs = 2:2:size(FR_byEpoch{1},2);
-sleepEpochs = 1:2:size(FR_byEpoch{1},2);
-FRbeh = {}; FRsleep = {};
+restEpochs = 1:2:size(FR_byEpoch{1},2);
+FRbeh = {}; FRrest = {};
 for a = 1:size(FR_byEpoch,2)
     FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
-    FRsleep{a} = FR_byEpoch{a}(:,sleepEpochs);
+    FRrest{a} = FR_byEpoch{a}(:,restEpochs);
 end
 
 
 % Gets epochs that have data for all states. For most states this should be all odd
 % epochs for the data I am sorting here, because all the states
-% happen during the sleep epochs except for rippletimes. I will detect non-empty
+% happen during the rest epochs except for rippletimes. I will detect non-empty
 % epochs for generality. Note this assumes all rats have the same number of
 % epochs as rat 1, which should be true when clip_17_epochs.m has been
 % used on C_allstates.
@@ -870,7 +843,7 @@ end
 
 %% Plot the rates as distributions
 stateHistF = figure;
-sgtitle("Mean FR Distributions During Sleep Epochs")
+sgtitle("Mean FR Distributions During Rest Epochs")
 faceColors = [];
 
 for s = 1:size(FR_allStates,1)
@@ -891,14 +864,14 @@ linkaxes(findobj(stateHistF,'Type','axes'), 'x');
 
 % Plot the CDF for each brain region together
 stateCDFF = figure;
-sgtitle("Cumulative Histogram Curves Separated by Sleep State (Sleep Epochs Only)")
+sgtitle("Cumulative Histogram Curves Separated by Rest State (Rest Epochs Only)")
 colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]};
 
 for a = 1:size(FR_allStates,2)
 
     subplot(1,size(FR_allStates,2),a)
     hold on;
-    % Plot all sleep states
+    % Plot all rest states
     for s = 1:size(FR_allStates,1)
         cdf = cdfplot(FR_allStates{s,a}(~isnan(FR_allStates{s,a})));
         cdf.Color = colors{s}; cdf.LineWidth=2;
@@ -916,7 +889,7 @@ for a = 1:size(FR_allStates,2)
 end
 
 
-% Histograms of all data from behavior or sleep epochs.
+% Histograms of all data from behavior or rest epochs.
 figure;
 sgtitle("Mean FR Distributions by Epoch Type")
 
@@ -930,17 +903,17 @@ ylabel("Counts")
 xlabel("Firing Rate (Hz)")
 legend(brainAreas)
 
-axsleep = subplot(1,2,2);
+axrest = subplot(1,2,2);
 hold on;
-edges = linspace(0, max(FRsleep{1},[],'all'), 10*sqrt(sum(~isnan(FRsleep{1}),'all')));
-histogram(FRsleep{1}(~isnan(FRsleep{1})), edges);
-histogram(FRsleep{2}(~isnan(FRsleep{2})), edges);
-title("Sleep (odd epochs)")
+edges = linspace(0, max(FRrest{1},[],'all'), 10*sqrt(sum(~isnan(FRrest{1}),'all')));
+histogram(FRrest{1}(~isnan(FRrest{1})), edges);
+histogram(FRrest{2}(~isnan(FRrest{2})), edges);
+title("Rest (odd epochs)")
 ylabel("Counts")
 xlabel("Firing Rate (Hz)")
 legend(brainAreas)
 
-linkaxes([axbeh,axsleep],'x');
+linkaxes([axbeh,axrest],'x');
 
 
 
@@ -959,7 +932,7 @@ for a = 1:size(FR_allStates,2)
 
     for s = 1:size(FR_allStates,1)
         % Calculate mean firing rate, standard deviation, and SEM values for
-        % each sleep epoch.
+        % each rest epoch.
         FRmeans = mean(FR_allStates{s,a},1,'omitnan');
         FRstds = std(FR_allStates{s,a},0,1,'omitnan');
         numnrns = sum(~isnan(FR_allStates{s,a}),1);
@@ -972,9 +945,9 @@ for a = 1:size(FR_allStates,2)
             FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
         end
 
-        errorbar(sleepEpochs,FRmeans(sleepEpochs),FR_CIs(1,sleepEpochs),FR_CIs(2,sleepEpochs),...
+        errorbar(restEpochs,FRmeans(restEpochs),FR_CIs(1,restEpochs),FR_CIs(2,restEpochs),...
             ".", Color=colors{s})
-        plot(sleepEpochs,FRmeans(sleepEpochs), Color=colors{s}, LineWidth=2, HandleVisibility='off')
+        plot(restEpochs,FRmeans(restEpochs), Color=colors{s}, LineWidth=2, HandleVisibility='off')
     end
     
     % Doing the same for wake epochs.
@@ -1009,10 +982,10 @@ DurMean = squeeze(mean(Dur_allStates,1,'omitnan')); % Take the mean across all r
 DurStd = squeeze(std(Dur_allStates,0,1,'omitnan'));
 
 for s = 1:size(DurMean,1)
-    errorbar(sleepEpochs,DurMean(s,sleepEpochs)./60, DurStd(s,sleepEpochs)./60, '.',Color=colors{s})
-    plot(sleepEpochs,DurMean(s,sleepEpochs)./60,Color=colors{s}, LineWidth=2, HandleVisibility='off')
+    errorbar(restEpochs,DurMean(s,restEpochs)./60, DurStd(s,restEpochs)./60, '.',Color=colors{s})
+    plot(restEpochs,DurMean(s,restEpochs)./60,Color=colors{s}, LineWidth=2, HandleVisibility='off')
 end
-title("Duration of States Across Animals (Sleep Epochs Only)")
+title("Duration of States Across Animals (Rest Epochs Only)")
 ylabel("Time in State (min)")
 xlabel("Epoch")
 legend(stateNames)
