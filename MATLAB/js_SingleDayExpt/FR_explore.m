@@ -15,7 +15,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'cellinfo','sleep01','waking01','sws01','rem01','spikes01'};
+filetypes = {'cellinfo','spikes01','sleep01','waking01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -632,8 +632,8 @@ txt = sprintf("pval = %.3d",pval_wake);
 text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 
 
-%% Now I want to split the firing rates into the groups that Aanchal did:
-% On track, wake during sleep sessions, NREM, and REM.
+%% Split the firing rates into the following states and plot them:
+% Behavior(on track), wake during sleep sessions, sleep, NREM, and REM.
 % Because cellinfo just holds the mean rate for a cell during an entire
 % epoch, I can't use this to evaluate sleep states. Instead I need to use
 % the spiking data for each cell, split it by sleep state, and take the
@@ -659,13 +659,27 @@ text(CA1w_cdf.XData(end-1)*(2/4), 1/4, txt);
 spikes_idx = find(contains(filetypes,'spikes01')); % Gets row index of spike data in C_alldata.
 % Note that indexing like this is only supposed to give one index as a
 % result.
+if isempty(spikes_idx)
+    error("spikes01 data must be loaded to run this analysis.")
+end
+
 cellinfo_idx = find(contains(filetypes,'cellinfo'));
+if isempty(cellinfo_idx)
+    error("cellinfo data must be loaded to run this analysis.")
+end
 
 % List of all states to sort the spike data into. Note that adding
 % rippletime01 adds quite a bit of calculation time. 
 stateNames = {'sleep','waking','sws','rem'};
-for s = 1:length(stateNames)
-    states_idx(s) = find(contains(filetypes, stateNames{s}));
+
+states_idx = find(contains(filetypes, stateNames));
+
+% for s = 1:length(stateNames)
+%     states_idx(s) = find(contains(filetypes, stateNames{s}));
+% end
+if isempty(states_idx)
+    error("at least one of the following sleep state data must be loaded: \n +" + ...
+        "   sleep01, waking01, sws01, rem01, or rippletime01.")
 end
 
 brainAreas = {'CA1','PFC'}; % Brain areas to split data into. Should be only CA1 and PFC
@@ -822,16 +836,14 @@ for a = 1:length(brainAreas)
                
                 end
             end
-    
-            FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];
-    
+            FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];   
         end
     end
 end
 
 
 
-%% Plot the rates as distributions
+% Plot the rates as distributions
 
 stateFig = figure;
 sgtitle("Mean FR Distributions During Sleep Epochs")
@@ -841,35 +853,48 @@ for s = 1:size(FR_allStates,1)
     edges = linspace(0, max(FR_allStates{s},[],'all'), 10*sqrt(sum(~isnan(FR_allStates{s}),'all')));
     subplot(ceil(size(FR_allStates,1)/2),2,s)
     hold on;
-    h = histogram(FR_allStates{s}(~isnan(FR_allStates{s})), edges);
+    hCA1 = histogram(FR_allStates{s,1}(~isnan(FR_allStates{s,1})), edges);
+    hPFC = histogram(FR_allStates{s,2}(~isnan(FR_allStates{s,2})), edges);
     title(stateNames{s})
     ylabel("Counts")
     xlabel("Firing Rate (Hz)")
+    legend(brainAreas)
 end
 linkaxes(findobj(stateFig,'Type','axes'), 'x');
 
 
-behEpochs = 2:2:size(FR_byEpoch,2);
-sleepEpochs = 1:2:size(FR_byEpoch,2);
-FRbeh = FR_byEpoch(:,behEpochs);
-FRsleep = FR_byEpoch(:,sleepEpochs);
+behEpochs = 2:2:size(FR_byEpoch{1},2);
+sleepEpochs = 1:2:size(FR_byEpoch{1},2);
+FRbeh = {}; FRsleep = {};
+for a = 1:size(FR_byEpoch,2)
+    FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
+    FRsleep{a} = FR_byEpoch{a}(:,sleepEpochs);
+end
+
+
 
 figure;
 sgtitle("Mean FR Distributions by Epoch Type")
-hold on;
+
 axbeh = subplot(1,2,1);
-edges = linspace(0, max(FRbeh,[],'all'), 10*sqrt(sum(~isnan(FRbeh),'all')));
-h = histogram(FRbeh(~isnan(FRbeh)), edges);
+hold on;
+edges = linspace(0, max(FRbeh{1},[],'all'), 10*sqrt(sum(~isnan(FRbeh{1}),'all')));
+histogram(FRbeh{1}(~isnan(FRbeh{1})), edges);
+histogram(FRbeh{2}(~isnan(FRbeh{2})), edges);
 title("Behavior (even epochs)")
 ylabel("Counts")
 xlabel("Firing Rate (Hz)")
+legend(brainAreas)
 
 axsleep = subplot(1,2,2);
-edges = linspace(0, max(FRsleep,[],'all'), 10*sqrt(sum(~isnan(FRsleep),'all')));
-h = histogram(FRsleep(~isnan(FRsleep)), edges);
+hold on;
+edges = linspace(0, max(FRsleep{1},[],'all'), 10*sqrt(sum(~isnan(FRsleep{1}),'all')));
+histogram(FRsleep{1}(~isnan(FRsleep{1})), edges);
+histogram(FRsleep{2}(~isnan(FRsleep{2})), edges);
 title("Sleep (odd epochs)")
 ylabel("Counts")
 xlabel("Firing Rate (Hz)")
+legend(brainAreas)
 
 linkaxes([axbeh,axsleep],'x');
 
@@ -877,4 +902,3 @@ linkaxes([axbeh,axsleep],'x');
 
 
 
-% I NEED TO SPLIT THESE INTO CA1 AND PFC
