@@ -122,10 +122,10 @@ for r = 1:length(C_allspikes)
     end
 end
 
+
 % Store all state data in one array. The order of the data
 % stored in rows is that of stateNames.
 C_allstates = C_alldata(states_idx,:);
-
 
 % Cell array to hold matrices for each brain region (in brainArea order).
 % Matrices contain mean spike rates by epoch, not discriminating by state. 
@@ -187,10 +187,11 @@ end
 
 % To hold firing rates for all states held in C_allstates
 FR_allStates = cell(size(C_allstates,1),length(brainAreas));
-% Time duration of states by epoch. (num rats) x (num states) x (num epochs).
-Dur_allStates = zeros(size(C_allstates,2),size(C_allstates,1),size(nonemptyEpochs,2)); 
+% Time duration of states by epoch. (num states) x  (num rats) x (num epochs).
+Dur_allStates = zeros(size(C_allstates,1),size(C_allstates,2),size(nonemptyEpochs,2));
+Dur_ratRef = zeros(size(C_allstates,1),size(C_allstates,2),size(nonemptyEpochs,2)); % Array to reference rat number
 % All the start and end times of all occurances. (num states) x (num rats).
-% Then within each cell are cells for each epoch, and within those is a 
+% Then within each cell are cells for each epoch, and within those is a
 % (num occurances) x 2 matrix. Col 1 is starttimes, col 2 endtimes.
 Occ_allStates = cell(size(C_allstates,1),size(C_allstates,2));
 
@@ -251,7 +252,8 @@ for a = 1:length(brainAreas)
                 occTimes = [epochData.starttime, epochData.endtime];
                 occDurs = epochData.endtime - epochData.starttime;
                 stateDur = sum(occDurs);  % Total time spent in state.
-                Dur_allStates(r,s,e) = stateDur;
+                Dur_allStates(s,r,e) = stateDur;
+                Dur_ratRef(s,r,e) = r;
                 FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
                 for nrn = 1:size(STs_inState,2)
                     if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
@@ -265,8 +267,133 @@ for a = 1:length(brainAreas)
                
                 end
             end
+
             FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];    
             Occ_allStates{s,r} = occEpochs;
         end
     end
 end
+
+
+
+
+
+%% Plot distribution of durations for occurances of each sleep state
+
+
+figure;
+hold on;
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]};
+allRatsStates = [Occ_allStates{:}];
+allOccs = vertcat(allRatsStates{:});
+allDurs = allOccs(:,2) - allOccs(:,1);
+edges = linspace(0,max(allDurs),15*sqrt(length(allDurs)/length(stateNames)));
+
+for s = 1:size(Occ_allStates,1)
+    rats = [Occ_allStates{s,:}]; % All the cells containing data for one state.
+    occs = vertcat(rats{:}); % All occurance times for a single state across animals and epochs.
+    durs = occs(:,2) - occs(:,1); % Durations of all occurances.
+    histogram(durs, edges, FaceColor=colors{s});
+end
+title("Durations of State Occurances")
+ylabel("Counts")
+xlabel("Duration (s)")
+legend(stateNames);
+
+
+% Just plotting REM and NREM together.
+figure;
+hold on;
+idx = find(contains(stateNames,'rem'));
+sws_idx = find(contains(stateNames,'sws'));
+idxs = [sws_idx,idx];
+swsremColors = {[0.5 0.1 1],[1 0 0]};
+swsremEdges = linspace(0,max(allDurs),15*sqrt(length(allDurs)/length(stateNames)));
+for s = 1:length(idxs)
+    rats = [Occ_allStates{idxs(s),:}]; % All the cells containing data for one state.
+    occs = vertcat(rats{:}); % All occurance times for a single state across animals and epochs.
+    durs = occs(:,2) - occs(:,1); % Durations of all occurances.
+    histogram(durs, edges, FaceColor=swsremColors{s});
+end
+title("Durations of SWS/REM Occurances")
+ylabel("Counts")
+xlabel("Duration (s)")
+legend(stateNames{idxs});
+
+
+% Normalized probability distribution.
+figure;
+hold on;
+for s = 1:size(Occ_allStates,1)
+    rats = [Occ_allStates{s,:}]; % All the cells containing data for one state.
+    occs = vertcat(rats{:}); % All occurance times for a single state across animals and epochs.
+    durs = occs(:,2) - occs(:,1); % Durations of all occurances.
+    histogram(durs, edges, FaceColor=colors{s},Normalization='probability');
+end
+title("Durations of State Occurances Norm by Probability")
+ylabel("Probability")
+xlabel("Duration (s)")
+legend(stateNames);
+
+
+% Individual histogram subplot.
+figure;
+hold on;
+sgtitle("Durations of Occurances by State")
+for s = 1:size(Occ_allStates,1)
+    subplot(ceil(size(Occ_allStates,1)/2), 2, s)
+    rats = [Occ_allStates{s,:}]; % All the cells containing data for one state.
+    occs = vertcat(rats{:}); % All occurance times for a single state across animals and epochs.
+    durs = occs(:,2) - occs(:,1); % Durations of all occurances.
+    edges = linspace(0,max(durs),5*sqrt(length(durs)));
+    histogram(durs, edges, FaceColor=colors{s});
+    title(stateNames{s})
+    ylabel("Count")
+    xlabel("Duration (s)")
+end
+
+
+
+
+%% Plot total duration of states by epoch
+
+
+figure;
+hold on;
+colors = {[0 0.4470 0.7410],[1 0.9 0],[0.5 0.1 1],[1 0 0]};
+xvalOffsets = [-0.3,-0.1,0.1,0.3]; % Amounts to offset each state by on the x-axis.
+for s = 1:size(Dur_allStates,1)
+    % Important note here from the documentation for plot:
+    % "If Y is a matrix, the plot contains one line for each column in Y."
+    % The y-data here is a matrix, and since I want each group of points to
+    % represent one epoch, it would seem like I need to have epochs as the second dimension.
+    % BUT somehow the plot function is messing things up and plotting the
+    % sets of y-data as rows of the matrix. So I need to transpose the
+    % matrix so that epochs are the rows and rats the columns.
+    % This is confusing because there are 9 rats and 9 rest epochs.
+    ratEpoch = squeeze(Dur_allStates(s,:,restEpochs));
+    ratEpochref = squeeze(Dur_ratRef(s,:,restEpochs)); % Holds IDs of rats for help in tracking matrix transformations.
+    xvals = restEpochs+xvalOffsets(s);
+    plot(xvals,ratEpoch'./60,...
+        'o', MarkerFaceColor=colors{s}, MarkerEdgeColor=colors{s}, HandleVisibility='off');
+    plot(restEpochs, mean(ratEpoch,1)./60, Color=colors{s})
+end
+title("Total State Durations Across Animals")
+ylabel("Time in State (min)")
+xlabel("Epoch")
+legend(stateNames);
+
+
+% Just a single state of choice
+figure;
+hold on;
+idx = find(contains(stateNames,'rem'));
+idxratEpoch = squeeze(Dur_allStates(idx,:,restEpochs));
+idxxvals = restEpochs;
+plot(idxxvals,idxratEpoch'./60,...
+    'o', MarkerFaceColor=colors{idx}, MarkerEdgeColor=colors{idx}, HandleVisibility='off');
+plot(idxxvals, mean(idxratEpoch,1)./60, Color=colors{idx})
+title(sprintf("Total %s Durations Across Animals",stateNames{idx}))
+ylabel("Time in State (min)")
+xlabel("Epoch")
+legend(stateNames{idx});
