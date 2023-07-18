@@ -920,8 +920,6 @@ linkaxes([axbeh,axrest],'x');
 
 
 
-
-
 % Plot rates by epoch and state
 stateEpochF = figure;
 sgtitle("Mean FR Across Epochs")
