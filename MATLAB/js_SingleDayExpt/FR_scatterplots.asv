@@ -304,15 +304,12 @@ for s = 1:size(FR_allStates,1)
     % Each vector should hold info from all epochs.
     stateidx = find(contains(stateNames,'sws'));
 
-    
+
     swsData = FR_allStates{stateidx,areaidx};
     vsData = FR_allStates{s,areaidx};
-
-    swsData = swsData(:,restEpochs);
-    vsData = vsData(:,restEpochs);
     
     subplot(ceil(size(FR_allStates,1)/2),2,s)
-    loglog(swsData(:),vsData(:),'o')
+    scatter(swsData(restEpochs))
 
 
     
