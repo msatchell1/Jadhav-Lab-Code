@@ -1,8 +1,6 @@
 function [C_runstate] = create_runstate(C_allpos)
-%CREATE_RUNSTATE    Create 
-%
-% Create a cell array variable similar to that of rem01,
-% sleep01, etc. from the velocity and time information in pos01.
+%CREATE_RUNSTATE Create a cell array variable similar to that of rem01,
+%sleep01, etc. from the velocity and time information in pos01.
 %   Inputs:
 %       C_allpos - cell array containing pos01 file data for all rats.
 %       Dimensions must be 1 x (num rats) for the outer cell array, with
@@ -94,4 +92,5 @@ end
 
 
 end
+
 

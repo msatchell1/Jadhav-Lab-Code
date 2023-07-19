@@ -69,9 +69,9 @@ end
 % WARNING: This does not change the order of how these states are stored in
 % C_allstates or later FR_allStates. Thus, stateNames MUST MATCH ORDER
 % THESE FILES ARE LISTED IN filetypes.
-stateNames = {'pos','sleep','waking','sws','rem'};
+stateFiles = {'pos','sleep','waking','sws','rem'};
 
-states_idx = find(contains(filetypes, stateNames));
+states_idx = find(contains(filetypes, stateFiles));
 
 % for s = 1:length(stateNames)
 %     states_idx(s) = find(contains(filetypes, stateNames{s}));
@@ -127,7 +127,7 @@ C_runstate = create_runstate(C_alldata(pos_idx,:));
 % Now overwrite the pos data n C_allstates with the run state information
 % in C_runstates.
 for r = 1:size(C_runstate,2)
-    C_allstates{find(contains(stateNames,'pos')),r} = C_runstate{1,r};
+    C_allstates{find(contains(stateFiles,'pos')),r} = C_runstate{1,r};
 end
 
 % Cell array to hold matrices for each brain region (in brainArea order).
@@ -185,8 +185,8 @@ end
 % epochs as rat 1, which should be true when clip_17_epochs.m has been
 % used on C_allstates.
 nonemptyEpochs = zeros(size(C_allstates,1),length(C_allstates{1,1}));
-for s = 1:size(C_allstates,1)
-    nonemptyEpochs(s,:) = ~cellfun(@isempty, C_allstates{s,1});
+for s2 = 1:size(C_allstates,1)
+    nonemptyEpochs(s2,:) = ~cellfun(@isempty, C_allstates{s2,1});
 end
 
 
@@ -206,20 +206,20 @@ Occ_allStates = cell(size(C_allstates,1),size(C_allstates,2));
 % Main loop to calculate mean firing rate for all states in all brain areas.
 for a = 1:length(brainAreas)
 
-    for s = 1:size(C_allstates,1)
+    for s2 = 1:size(C_allstates,1)
     
         % Gets epochs that have data for this state. This should be identical across rats.
         nonempty = zeros(1,length(C_allstates{1,1}));
     
         for r = 1:size(C_allstates,2) 
             % Indicates which epochs contain data
-            nonempty(1,:) = ~cellfun(@isempty, C_allstates{s,r});
+            nonempty(1,:) = ~cellfun(@isempty, C_allstates{s2,r});
             % To hold mean firing rate data across all epochs for a single rat.
             ratMeans = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
             % To hold state occurances for all epochs.
-            occEpochs = cell(1,length(C_allstates{s,r}));
+            occEpochs = cell(1,length(C_allstates{s2,r}));
     
-            for e = 1:length(C_allstates{s,r})
+            for e = 1:length(C_allstates{s2,r})
                 
                 if nonempty(1,e) == 1
                 % Now the real deal. For every non-empty epoch, each state type (rem, rippletime,
@@ -229,7 +229,7 @@ for a = 1:length(brainAreas)
                 % these spike counts will be summed up and divided by the
                 % total duration of that state to get the mean rate.
                 
-                epochData = C_allstates{s,r}{1,e}; % Data on a single rat, state, and epoch.
+                epochData = C_allstates{s2,r}{1,e}; % Data on a single rat, state, and epoch.
                 nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets.
                 STs_inState = cell(1,length(nrnsAlltets)); % Cell of spike times that occur within the given state.
                 % Columns are neurons.
@@ -260,8 +260,8 @@ for a = 1:length(brainAreas)
                 occTimes = [epochData.starttime, epochData.endtime];
                 occDurs = epochData.endtime - epochData.starttime;
                 stateDur = sum(occDurs);  % Total time spent in state.
-                Dur_allStates(s,r,e) = stateDur;
-                Dur_ratRef(s,r,e) = r;
+                Dur_allStates(s2,r,e) = stateDur;
+                Dur_ratRef(s2,r,e) = r;
                 FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
                 for nrn = 1:size(STs_inState,2)
                     if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
@@ -276,76 +276,171 @@ for a = 1:length(brainAreas)
                 end
             end
 
-            FR_allStates{s,a} = [FR_allStates{s,a}; ratMeans];    
-            Occ_allStates{s,r} = occEpochs;
+            FR_allStates{s2,a} = [FR_allStates{s2,a}; ratMeans];    
+            Occ_allStates{s2,r} = occEpochs;
         end
     end
 end
 
-
-stateNames{find(contains(stateNames,'pos'))} = 'run'; % Change name to run 
-% because that is a better description of the state.
 
 
 %% I need to plot velocity with the times I have designated as "run" to check that 
 % what I did worked.
 
 
+posData = C_alldata(find(contains(filetypes,'pos01')),:); % Grabs position file data.
+runData = C_allstates(find(contains(stateFiles,'pos')),:);
+r = 1;
+e = 2;
+
+posStruct = posData{1,r}{1,e};
+runStruct = stateData{1,r}{1,e};
+
+vel = posStruct.data(:,5);
+vel_sm = sgolayfilt(vel, 2, 41); % Smoothing the data.
+
+% timeRange = linspace(runStruct.timerange(1),runStruct.timerange(2),size(posStruct.data,1));
+
+figure;
+hold on;
+title(sprintf("Velocity and Run State | Rat %d, Epoch %d", r, e))
+plot(posStruct.data(:,1), vel)
+plot(posStruct.data(:,1), vel_sm)
+
+run_labels = {};
+for i = 1:length(runStruct.starttime)
+    x_vertices = [runStruct.starttime(i),runStruct.endtime(i),runStruct.endtime(i),runStruct.starttime(i)];
+    y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.3, 'EdgeColor','none')
+
+    if i == 1
+        run_labels{i} = "run times";
+    else
+        run_labels{i} = "";
+    end
+end
+ylabel("Velocity (cm/s)")
+xlabel("Time (s)")
+legend({'vel','smooth vel', run_labels{:}})
+
+
+
+
 
 %% Begin FR scatter plot analysis
 
-% logical to plot all individual plots.
-plotindv = 1;
+% logicals to plot all individual plots and subplots.
+plotindv = 0;
+plotsubplots = 1;
 
+% Names to be used when plotting of the different states. Note, this array
+% can be larger than stateFiles because some stateFiles can be used to
+% produce multiple states, such as pos01 being used for 'run' and 'still'.
+stateNames = {'run','still','sleep','wake','sws','rem'};
 stateColors = [[0.6 0.9 0]; [0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]];
-
-% SWS vs. all states
-for a = 1:length(brainAreas)
-    figure;
-    sgtitle(sprintf("Neuron FRs | SWS vs. All States | %s",brainAreas{a}))
-    for s = 1:size(FR_allStates,1)
-        
-        % Form vectors of firing rates for the two states being plotted against
-        % each other, making sure to perserve the cell identity in each vector.
-        % Each vector should hold info from all epochs.
-        stateidx = find(contains(stateNames,'sws'));
     
-        
-        swsData = FR_allStates{stateidx,a};
-        vsData = FR_allStates{s,a}; % Data of state to be plotted against.
-    
-        swsData = swsData(:,restEpochs);
-        vsData = vsData(:,restEpochs);
-        % NOTE I need to leave the NaNs in these matrices to preserve the
-        % neuron IDs. Some neurons have NaN in one matrix and not the
-        % other, so removing NaNs messes up the matching of x and y values
-        % between the two lists. 
-        
-        subplot(ceil(size(FR_allStates,1)/2),2,s);
-        hold on;
+numg = 1; % Number of groups to evenly split the data into.
 
-        numg = 1; % Number of groups to evenly split the data into.
-        groups = randi([1,numg],[length(swsData(:)),1]);
-        clrs = [];
-        if numg > 1
-            for g = 1:numg-1
-                clrs = [clrs; [0.7 0.7 0.7]]; % Assign all but last group to color grey
-            end
-        end
-        clrs = [clrs; stateColors(s,:)]; 
 
-        gscatter(gca, swsData(:),vsData(:),randinds, clrs, '.', 1, doleg='off');
-        plot(min(vsData(:)):max(vsData(:)), min(vsData(:)):max(vsData(:)),'k')
-        xlabel("SWS Mean FR (Hz)")
-        ylabel(sprintf("%s Mean FR (Hz)", stateNames{s}))
-        set(gca, 'XScale', 'log', 'YScale', 'log');
+while(1) % Prompt user to determine whether or not to continue with plotting.
+    usri = input(sprintf('%d figures will be created. Do you wish to continue? y/n :',...
+        plotindv*(size(FR_allStates,1)^2)*length(brainAreas) + plotsubplots*size(FR_allStates,1)*length(brainAreas)),'s');
+    if strcmpi(usri,'y')
+        disp("Plotting figures...")
+        break;
+    else
+        disp("Execution stopped.")
+        return
     end
 end
 
 
-if plotindv
-
+%I will loop through all the states twice. This way I plot all
+%combinations of states vs. eachother.
+for s1 = 1:size(FR_allStates,1)
     
+    if plotsubplots
+
+        for a = 1:length(brainAreas)
+            figure;
+            sgtitle(sprintf("Neuron FRs | %s vs. All States | %s",stateFiles{s1},brainAreas{a}))
+            for s2 = 1:size(FR_allStates,1)
+                
+                % Form vectors of firing rates for the two states being plotted against
+                % each other, making sure to perserve the cell identity in each vector.
+                % Each vector should hold info from all epochs.                
+                s1Data = FR_allStates{s1,a};
+                s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
+            
+                s1Data = s1Data(:,restEpochs);
+                s2Data = s2Data(:,restEpochs);
+                % NOTE I need to leave the NaNs in these matrices to preserve the
+                % neuron IDs. Some neurons have NaN in one matrix and not the
+                % other, so removing NaNs messes up the matching of x and y values
+                % between the two lists. 
+                
+                subplot(ceil(size(FR_allStates,1)/2),2,s2);
+                hold on;
+                groups = randi([1,numg],[length(s1Data(:)),1]);
+                clrs = [];
+                if numg > 1
+                    for g = 1:numg-1
+                        clrs = [clrs; [0.7 0.7 0.7]]; % Assign all but last group to color grey
+                    end
+                end
+                clrs = [clrs; stateColors(s2,:)]; 
+        
+                gscatter(gca, s1Data(:),s2Data(:),groups, clrs, '.', 1, doleg='off');
+                plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
+                xlabel(sprintf("%s Mean FR (Hz)",stateFiles{s1}))
+                ylabel(sprintf("%s Mean FR (Hz)", stateFiles{s2}))
+                set(gca, 'XScale', 'log', 'YScale', 'log');
+            end
+        end
+    end
+    
+    
+    if plotindv % Individual FR plots
+    
+        for a = 1:length(brainAreas)
+            for s2 = 1:size(FR_allStates,1)
+                
+                % Form vectors of firing rates for the two states being plotted against
+                % each other, making sure to perserve the cell identity in each vector.
+                % Each vector should hold info from all epochs.                
+                s1Data = FR_allStates{s1,a};
+                s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
+            
+                s1Data = s1Data(:,restEpochs);
+                s2Data = s2Data(:,restEpochs);
+                % NOTE I need to leave the NaNs in these matrices to preserve the
+                % neuron IDs. Some neurons have NaN in one matrix and not the
+                % other, so removing NaNs messes up the matching of x and y values
+                % between the two lists. 
+                
+                figure;
+                hold on;
+                groups = randi([1,numg],[length(s1Data(:)),1]);
+                clrs = [];
+                if numg > 1
+                    for g = 1:numg-1
+                        clrs = [clrs; [0.7 0.7 0.7]]; % Assign all but last group to color grey
+                    end
+                end
+                clrs = [clrs; stateColors(s2,:)]; 
+        
+                gscatter(gca, s1Data(:),s2Data(:),groups, clrs, '.', 1, doleg='off');
+                plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
+                xlabel(sprintf("%s Mean FR (Hz)",stateFiles{s1}))
+                ylabel(sprintf("%s Mean FR (Hz)", stateFiles{s2}))
+                title(sprintf("%s vs. %s | %s",stateFiles{s1},stateFiles{s2},brainAreas{a}))
+                set(gca, 'XScale', 'log', 'YScale', 'log');
+            end
+        end
+    
+    end
+
+end
 
 
 
