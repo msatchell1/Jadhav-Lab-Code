@@ -283,6 +283,9 @@ for a = 1:length(brainAreas)
 end
 
 
+stateNames{find(contains(stateNames,'pos'))} = 'run'; % Change name to run 
+% because that is a better description of the state.
+
 
 %% I need to plot velocity with the times I have designated as "run" to check that 
 % what I did worked.
@@ -291,31 +294,52 @@ end
 
 %% Begin FR scatter plot analysis
 
+% logical to plot all individual plots.
+plotindv = 
+
+stateColors = [[0.6 0.9 0]; [0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]];
 
 % SWS vs. all states
-figure;
-hold on;
-sgtitle("SWS vs. All States")
-areaidx = find(contains(brainAreas,'CA1'));
-for s = 1:size(FR_allStates,1)
+for a = 1:length(brainAreas)
+    figure;
+    sgtitle(sprintf("Neuron FRs | SWS vs. All States | %s",brainAreas{a}))
+    for s = 1:size(FR_allStates,1)
+        
+        % Form vectors of firing rates for the two states being plotted against
+        % each other, making sure to perserve the cell identity in each vector.
+        % Each vector should hold info from all epochs.
+        stateidx = find(contains(stateNames,'sws'));
     
-    % Form vectors of firing rates for the two states being plotted against
-    % each other, making sure to perserve the cell identity in each vector.
-    % Each vector should hold info from all epochs.
-    stateidx = find(contains(stateNames,'sws'));
-
-
-    swsData = FR_allStates{stateidx,areaidx};
-    vsData = FR_allStates{s,areaidx};
+        
+        swsData = FR_allStates{stateidx,a};
+        vsData = FR_allStates{s,a}; % Data of state to be plotted against.
     
-    subplot(ceil(size(FR_allStates,1)/2),2,s)
-    scatter(swsData(restEpochs))
+        swsData = swsData(:,restEpochs);
+        vsData = vsData(:,restEpochs);
+        % NOTE I need to leave the NaNs in these matrices to preserve the
+        % neuron IDs. Some neurons have NaN in one matrix and not the
+        % other, so removing NaNs messes up the matching of x and y values
+        % between the two lists. 
+        
+        subplot(ceil(size(FR_allStates,1)/2),2,s);
+        hold on;
 
+        numg = 1; % Number of groups to evenly split the data into.
+        groups = randi([1,numg],[length(swsData(:)),1]);
+        clrs = [];
+        if numg > 1
+            for g = 1:numg-1
+                clrs = [clrs; [0.7 0.7 0.7]]; % Assign all but last group to color grey
+            end
+        end
+        clrs = [clrs; stateColors(s,:)]; 
 
-    
-    
-
-
+        gscatter(gca, swsData(:),vsData(:),randinds, clrs, '.', 1, doleg='off');
+        plot(min(vsData(:)):max(vsData(:)), min(vsData(:)):max(vsData(:)),'k')
+        xlabel("SWS Mean FR (Hz)")
+        ylabel(sprintf("%s Mean FR (Hz)", stateNames{s}))
+        set(gca, 'XScale', 'log', 'YScale', 'log');
+    end
 end
 
 
