@@ -1,6 +1,8 @@
-function [C_runstate] = create_runstate(C_allpos)
-%CREATE_RUNSTATE Create a cell array variable similar to that of rem01,
-%sleep01, etc. from the velocity and time information in pos01.
+function [C_stillstate] = create_stillstate(C_allpos)
+%CREATE_RUNSTATE    Create cell array for times of stillness.
+%
+% Create a cell array variable similar to that of rem01,
+% sleep01, etc. from the velocity and time information in pos01.
 %   Inputs:
 %       C_allpos - cell array containing pos01 file data for all rats.
 %       Dimensions must be 1 x (num rats) for the outer cell array, with
@@ -9,23 +11,23 @@ function [C_runstate] = create_runstate(C_allpos)
 %       column of data must be time and the fifth column velocity in cm/s.
 %
 %   Outputs:
-%       C_runstate - cell array containing start and end time information
-%       for the running of each animal. Running is defined as having a
-%       velocity greater than or equal to vel_thr. Dimensions are identical
+%       C_stillstate - cell array containing start and end time information
+%       for the stillness of each animal. Stillness is defined as having a
+%       velocity less than vel_thr. Dimensions are identical
 %       to C_allpos, with structs contaning the fields 'starttime',
 %       'endtime', 'timerange', 'vel_thr', and 'dur_thr'.
 
 vel_thr = 4; % Velocity threshold, above which the rat is considered running 
 % and below which stationary.
-dur_thr = 0.165; % Duration of running required to be listed as an occurance
+% dur_thr = 0.165; % Duration of running required to be listed as an occurance
 % (in seconds). The time steps in data are approximately 0.033 seconds
-% apart, so requiring 5 consecutive time steps above velocity threshold
+% apart, so requiring 5 consecutive time steps below velocity threshold
 % translates to 0.165 seconds.
 C_runstate = cell(1,size(C_allpos,2));
 
 for r = 1:size(C_allpos,2)
 
-    epochRunState = cell(1,size(C_allpos{1,r},2));
+    epochStillState = cell(1,size(C_allpos{1,r},2));
 
     for e = 1:size(C_allpos{1,r},2)
         
@@ -33,30 +35,32 @@ for r = 1:size(C_allpos,2)
         times = data(:,1); % Time indicies
         vel = data(:,5); % Velocity of the rat at those times
 
-        runStruct.timerange = [times(1), times(end)]; % Create struct and assign the time range.
-        runStruct.vel_thr = vel_thr;
-        runStruct.dur_thr = dur_thr;
-        
-        % Arrays to hold start and end times of run periods.
-        starttimes = []; endtimes = [];
-        inrun = 0; % 1 if currently running, 0 if not.
+        velSmooth = sgolayfilt(vel,2,31); % Smooths velocity data (it needs smoothing!).
 
-        if times(1) > vel_thr % Assign first start time if above threshold.
+        stillStruct.timerange = [times(1), times(end)]; % Create struct and assign the time range.
+        stillStruct.vel_thr = vel_thr;
+        % stillStruct.dur_thr = dur_thr;
+        
+        % Arrays to hold start and end times of still periods.
+        starttimes = []; endtimes = [];
+        instill = 0; % 1 if currently still, 0 if not.
+
+        if velSmooth(1) < vel_thr % Assign first start time if above threshold.
             starttimes(1) = times(1);
-            inrun = 1;
+            instill = 1;
         end
         
         % Demarcate start and end times.
         for t = 1:(size(times,1)-1)
             
-            if ~inrun && vel(t+1) >= vel_thr % start times
+            if ~instill && velSmooth(t+1) < vel_thr % start times
                 starttimes = [starttimes; times(t+1)];
-                inrun = 1;
+                instill = 1;
             end
 
-            if inrun && vel(t+1) <= vel_thr % end times
+            if instill && velSmooth(t+1) >= vel_thr % end times
                 endtimes = [endtimes; times(t+1)];
-                inrun = 0;
+                instill = 0;
             end
         end
 
@@ -71,19 +75,21 @@ for r = 1:size(C_allpos,2)
             endtimes(end+1) = times(end);
         end
 
-        % Finally, remove run occurances that are too short.
-        islong = (endtimes-starttimes) >= dur_thr;
-        starttimes = starttimes(islong);
-        endtimes = endtimes(islong);
+        % % Finally, remove run occurances that are too short. I may not need
+        % % this now that the velocity is filtered, but it doesn't hurt to
+        % % leave it here.
+        % islong = (endtimes-starttimes) >= dur_thr;
+        % starttimes = starttimes(islong);
+        % endtimes = endtimes(islong);
 
         % Store times for this epoch
-        runStruct.starttime = starttimes;
-        runStruct.endtime = endtimes;
+        stillStruct.starttime = starttimes;
+        stillStruct.endtime = endtimes;
 
-        epochRunState{1,e} = runStruct;
+        epochStillState{1,e} = stillStruct;
     end
 
-    C_runstate{1,r} = epochRunState;
+    C_stillstate{1,r} = epochStillState;
 
 end
 
@@ -92,5 +98,3 @@ end
 
 
 end
-
-

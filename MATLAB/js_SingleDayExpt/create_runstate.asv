@@ -1,5 +1,5 @@
 function [C_runstate] = create_runstate(C_allpos)
-%CREATE_RUNSTATE    Create cell array for times of running.
+%CREATE_RUNSTATE    Create 
 %
 % Create a cell array variable similar to that of rem01,
 % sleep01, etc. from the velocity and time information in pos01.
@@ -19,7 +19,7 @@ function [C_runstate] = create_runstate(C_allpos)
 
 vel_thr = 4; % Velocity threshold, above which the rat is considered running 
 % and below which stationary.
-% dur_thr = 0.165; % Duration of running required to be listed as an occurance
+dur_thr = 0.165; % Duration of running required to be listed as an occurance
 % (in seconds). The time steps in data are approximately 0.033 seconds
 % apart, so requiring 5 consecutive time steps above velocity threshold
 % translates to 0.165 seconds.
@@ -39,13 +39,13 @@ for r = 1:size(C_allpos,2)
 
         runStruct.timerange = [times(1), times(end)]; % Create struct and assign the time range.
         runStruct.vel_thr = vel_thr;
-        % runStruct.dur_thr = dur_thr;
+        runStruct.dur_thr = dur_thr;
         
         % Arrays to hold start and end times of run periods.
         starttimes = []; endtimes = [];
         inrun = 0; % 1 if currently running, 0 if not.
 
-        if velSmooth(1) > vel_thr % Assign first start time if above threshold.
+        if (1) > vel_thr % Assign first start time if above threshold.
             starttimes(1) = times(1);
             inrun = 1;
         end
@@ -53,12 +53,12 @@ for r = 1:size(C_allpos,2)
         % Demarcate start and end times.
         for t = 1:(size(times,1)-1)
             
-            if ~inrun && velSmooth(t+1) >= vel_thr % start times
+            if ~inrun && vel(t+1) >= vel_thr % start times
                 starttimes = [starttimes; times(t+1)];
                 inrun = 1;
             end
 
-            if inrun && velSmooth(t+1) < vel_thr % end times
+            if inrun && vel(t+1) <= vel_thr % end times
                 endtimes = [endtimes; times(t+1)];
                 inrun = 0;
             end
@@ -75,10 +75,10 @@ for r = 1:size(C_allpos,2)
             endtimes(end+1) = times(end);
         end
 
-        % % Finally, remove run occurances that are too short.
-        % islong = (endtimes-starttimes) >= dur_thr;
-        % starttimes = starttimes(islong);
-        % endtimes = endtimes(islong);
+        % Finally, remove run occurances that are too short.
+        islong = (endtimes-starttimes) >= dur_thr;
+        starttimes = starttimes(islong);
+        endtimes = endtimes(islong);
 
         % Store times for this epoch
         runStruct.starttime = starttimes;

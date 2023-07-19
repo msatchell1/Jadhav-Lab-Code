@@ -69,7 +69,13 @@ end
 % WARNING: This does not change the order of how these states are stored in
 % C_allstates or later FR_allStates. Thus, stateNames MUST MATCH ORDER
 % THESE FILES ARE LISTED IN filetypes.
-stateFiles = {'pos','sleep','waking','sws','rem'};
+stateFiles = {'sleep','waking','sws','rem'};
+
+% Names to be used when plotting of the different states. Note, this array
+% can be larger than stateFiles because some stateFiles can be used to
+% produce multiple states, such as pos01 being used for 'run' and 'still'.
+% This list must match the order of states in C_allstates.
+stateNames = {'sleep','wake','sws','rem','run','still'};
 
 states_idx = find(contains(filetypes, stateFiles));
 
@@ -119,16 +125,20 @@ end
 % Store all state data in one array. The order of the data
 % stored in rows is that of stateNames.
 C_allstates = C_alldata(states_idx,:);
-% Identify times at which velocity is above 4 cm/s and fill a cell array
+
+% Identify times at which velocity is above a threshold and fill a cell array
 % full of structs that matches that of the other states like REM, NREM,
 % etc. This is done by create_runstate.m.
 pos_idx = find(contains(filetypes,'pos01'));
 C_runstate = create_runstate(C_alldata(pos_idx,:));
-% Now overwrite the pos data n C_allstates with the run state information
-% in C_runstates.
-for r = 1:size(C_runstate,2)
-    C_allstates{find(contains(stateFiles,'pos')),r} = C_runstate{1,r};
-end
+% Do the same for times when vel < threshold.
+C_stillstate = create_stillstate(C_alldata(pos_idx,:));
+
+% Now add run and still state data to C_allstates 
+C_allstates = [C_allstates; C_runstate; C_stillstate];
+% for r = 1:size(C_alldata,2)
+%     C_allstates{end+1,r} = C_runstate{1,r};
+% end
 
 % Cell array to hold matrices for each brain region (in brainArea order).
 % Matrices contain mean spike rates by epoch, not discriminating by state. 
@@ -289,15 +299,17 @@ end
 
 
 posData = C_alldata(find(contains(filetypes,'pos01')),:); % Grabs position file data.
-runData = C_allstates(find(contains(stateFiles,'pos')),:);
+runData = C_allstates(find(contains(stateNames,'run')),:);
+stillData = C_allstates(find(contains(stateNames,'still')),:);
 r = 1;
 e = 2;
 
 posStruct = posData{1,r}{1,e};
-runStruct = stateData{1,r}{1,e};
+runStruct = runData{1,r}{1,e};
+stillStruct = stillData{1,r}{1,e};
 
 vel = posStruct.data(:,5);
-vel_sm = sgolayfilt(vel, 2, 41); % Smoothing the data.
+vel_sm = sgolayfilt(vel, 2, 31); % Smoothing the data.
 
 % timeRange = linspace(runStruct.timerange(1),runStruct.timerange(2),size(posStruct.data,1));
 
@@ -307,37 +319,50 @@ title(sprintf("Velocity and Run State | Rat %d, Epoch %d", r, e))
 plot(posStruct.data(:,1), vel)
 plot(posStruct.data(:,1), vel_sm)
 
-run_labels = {};
+runLabels = {};
 for i = 1:length(runStruct.starttime)
     x_vertices = [runStruct.starttime(i),runStruct.endtime(i),runStruct.endtime(i),runStruct.starttime(i)];
     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
-    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.3, 'EdgeColor','none')
+    patch(x_vertices, y_vertices, [0.6 0.9 0],'FaceAlpha', 0.3, 'EdgeColor','none')
 
     if i == 1
-        run_labels{i} = "run times";
+        runLabels{i} = "run times";
     else
-        run_labels{i} = "";
+        runLabels{i} = "";
     end
 end
+
+stillLabels = {};
+for i = 1:length(stillStruct.starttime)
+    x_vertices = [stillStruct.starttime(i),stillStruct.endtime(i),stillStruct.endtime(i),stillStruct.starttime(i)];
+    y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+    patch(x_vertices, y_vertices, [0 0.9 1],'FaceAlpha', 0.3, 'EdgeColor','none')
+
+    if i == 1
+        stillLabels{i} = "still times";
+    else
+        stillLabels{i} = "";
+    end
+end
+
 ylabel("Velocity (cm/s)")
 xlabel("Time (s)")
-legend({'vel','smooth vel', run_labels{:}})
+legend({'vel','smooth vel', runLabels{:}, stillLabels{:}})
 
 
 
 
 
 %% Begin FR scatter plot analysis
+% NOTE this analysis treats cells between epochs as if they are
+% different cells. I don't know if this is best, or if I should maintain
+% cell identity across epochs and calculate an average FR.
 
 % logicals to plot all individual plots and subplots.
 plotindv = 0;
 plotsubplots = 1;
 
-% Names to be used when plotting of the different states. Note, this array
-% can be larger than stateFiles because some stateFiles can be used to
-% produce multiple states, such as pos01 being used for 'run' and 'still'.
-stateNames = {'run','still','sleep','wake','sws','rem'};
-stateColors = [[0.6 0.9 0]; [0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]];
+stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
     
 numg = 1; % Number of groups to evenly split the data into.
 
@@ -363,7 +388,7 @@ for s1 = 1:size(FR_allStates,1)
 
         for a = 1:length(brainAreas)
             figure;
-            sgtitle(sprintf("Neuron FRs | %s vs. All States | %s",stateFiles{s1},brainAreas{a}))
+            sgtitle(sprintf("Neuron FRs | %s vs. All States | %s",stateNames{s1},brainAreas{a}))
             for s2 = 1:size(FR_allStates,1)
                 
                 % Form vectors of firing rates for the two states being plotted against
@@ -371,9 +396,25 @@ for s1 = 1:size(FR_allStates,1)
                 % Each vector should hold info from all epochs.                
                 s1Data = FR_allStates{s1,a};
                 s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
+
+                % For run and still states I only want the behavioral
+                % epochs. All other states I want rest epochs.
+                if any(contains(['run','still'],stateNames{s1})) && any(contains(['run','still'],stateNames{s2}))
+                    s1Data = s1Data(:,behEpochs);
+                    s2Data = s2Data(:,behEpochs);
+                elseif any(contains(['run','still'],stateNames{s1}))
+                    s1Data = s1Data(:,behEpochs);
+                    % Temporay fix. Omits first sleep epoch to keep number of epochs the same between behavior and rest.
+                    s2Data = s2Data(:,restEpochs(2:end)); 
+                elseif any(contains(['run','still'],stateNames{s2}))
+                    s1Data = s1Data(:,restEpochs(2:end));
+                    s2Data = s2Data(:,behEpochs);
+                else
+                    s1Data = s1Data(:,restEpochs);
+                    s2Data = s2Data(:,restEpochs);
+                end
             
-                s1Data = s1Data(:,restEpochs);
-                s2Data = s2Data(:,restEpochs);
+                
                 % NOTE I need to leave the NaNs in these matrices to preserve the
                 % neuron IDs. Some neurons have NaN in one matrix and not the
                 % other, so removing NaNs messes up the matching of x and y values
@@ -392,8 +433,8 @@ for s1 = 1:size(FR_allStates,1)
         
                 gscatter(gca, s1Data(:),s2Data(:),groups, clrs, '.', 1, doleg='off');
                 plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
-                xlabel(sprintf("%s Mean FR (Hz)",stateFiles{s1}))
-                ylabel(sprintf("%s Mean FR (Hz)", stateFiles{s2}))
+                xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
+                ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
                 set(gca, 'XScale', 'log', 'YScale', 'log');
             end
         end
@@ -431,9 +472,9 @@ for s1 = 1:size(FR_allStates,1)
         
                 gscatter(gca, s1Data(:),s2Data(:),groups, clrs, '.', 1, doleg='off');
                 plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
-                xlabel(sprintf("%s Mean FR (Hz)",stateFiles{s1}))
-                ylabel(sprintf("%s Mean FR (Hz)", stateFiles{s2}))
-                title(sprintf("%s vs. %s | %s",stateFiles{s1},stateFiles{s2},brainAreas{a}))
+                xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
+                ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
+                title(sprintf("%s vs. %s | %s",stateNames{s1},stateNames{s2},brainAreas{a}))
                 set(gca, 'XScale', 'log', 'YScale', 'log');
             end
         end
