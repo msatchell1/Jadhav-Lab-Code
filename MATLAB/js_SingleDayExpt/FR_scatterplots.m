@@ -359,8 +359,8 @@ legend({'vel','smooth vel', runLabels{:}, stillLabels{:}})
 % cell identity across epochs and calculate an average FR.
 
 % logicals to plot all individual plots and subplots.
-plotindv = 0;
-plotsubplots = 1;
+plotindv = 1;
+plotsubplots = 0;
 
 stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
     
