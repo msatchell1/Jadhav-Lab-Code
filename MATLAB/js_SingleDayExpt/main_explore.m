@@ -112,7 +112,7 @@
 % Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
 % Under each trajectory is the place field data for that cell on that
 % trajectory. Column 1 is the distance in cm along that linearized
-% trajectory. Column 5 contains the occupancy normalized smooth firing field.
+% trajectory. Column 5 contains the occupancy normalized smooth firing rate.
 %
 % LFP files:
 % day / epoch / tetrode 

@@ -8,7 +8,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'cellinfo','spikes01','pos01','sleep01','waking01','sws01','rem01'};
+filetypes = {'linfields01','cellinfo','spikes01','pos01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -313,10 +313,12 @@ for r = 1:size(posData,2)
     end
 end
 
-edges = linspace(0, max(allVelData), sqrt(size(allVelData,1)));
+edges = linspace(5, 55, sqrt(size(allVelData,1))); % There are very few velocity values above 55
 figure;
 histogram(allVelData, edges)
-title("Velocities Across ")
+title("Velocities Across all Rats and Epochs")
+ylabel("Count")
+xlabel("Velocity (cm/s)")
 
 
 % %% I need to plot velocity with the times I have designated as "run" to check that 
@@ -510,7 +512,52 @@ end
 
 
 
+%% Identify place cells and label them on the scatter plots
 
+% How blake identifies place cells:
+
+linfData = C_alldata(find(contains(filetypes,'linfields01')),:);
+
+for r = 1:size(linfData,2)
+    for e = 1:size(linfData{1,r},2)
+
+        if ~isempty(linfData{1,r}{1,e}) % Goes into behavioral epochs only.
+
+            nrnsAllTets = [linfData{1,r}{1,e}{:}]; % Gets all neurons for one rat and one epoch.
+
+            for nrn = 1:size(nrnsAllTets,2)
+                
+                if ~isempty(nrnsAllTets{1,nrn})
+                    
+                    figure;
+                    sgtitle(sprintf("Epoch %d Nrn %d",e,nrn))
+                    for tr = 1:4 % 4 different trajectories
+                        trData = nrnsAllTets{1,nrn}{1,tr};
+                        FRmean = mean(trData(:,5),1,'omitnan');
+                        FRstd = std(trData(:,5),1,'omitnan');
+
+                        subplot(2,2,tr)
+                        hold on;
+                        plot(trData(:,1), trData(:,5), 'k')
+                        plot(trData(:,1), ones(size(trData(:,1)))*FRmean, "--r")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+FRstd), "--b")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+2*FRstd), "--b")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+3*FRstd), "--b")
+                        ylabel("Occ Norm FR")
+                        xlabel("Lin Pos (cm)")
+                        title(sprintf("Traj %d",tr))
+                    end
+                    pause
+                    close
+                end
+
+
+            end
+
+        end
+        
+    end
+end
 
 
 

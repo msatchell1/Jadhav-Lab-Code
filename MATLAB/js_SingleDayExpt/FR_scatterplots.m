@@ -514,7 +514,59 @@ end
 
 %% Identify place cells and label them on the scatter plots
 
+% How blake identifies place cells:
+% He did a lot of research and found that there is no concensus on how to
+% define place cells. How he does it:
+% Cells must satisfy threshold values for these measures:
+% Mean firing rate - below 8 Hz or so (double check).
+% Peak firing rate - Must be x number of std above mean FR.
+% Sparsity
+% Spatial specificity
+% Spatial coherence
+% 
 
+linfData = C_alldata(find(contains(filetypes,'linfields01')),:);
+
+for r = 1:size(linfData,2)
+    for e = 1:size(linfData{1,r},2)
+
+        if ~isempty(linfData{1,r}{1,e}) % Goes into behavioral epochs only.
+
+            nrnsAllTets = [linfData{1,r}{1,e}{:}]; % Gets all neurons for one rat and one epoch.
+
+            for nrn = 1:size(nrnsAllTets,2)
+                
+                if ~isempty(nrnsAllTets{1,nrn})
+                    
+                    figure;
+                    sgtitle(sprintf("Epoch %d Nrn %d",e,nrn))
+                    for tr = 1:4 % 4 different trajectories
+                        trData = nrnsAllTets{1,nrn}{1,tr};
+                        FRmean = mean(trData(:,5),1,'omitnan');
+                        FRstd = std(trData(:,5),1,'omitnan');
+
+                        subplot(2,2,tr)
+                        hold on;
+                        plot(trData(:,1), trData(:,5), 'k')
+                        plot(trData(:,1), ones(size(trData(:,1)))*FRmean, "--r")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+FRstd), "--b")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+2*FRstd), "--b")
+                        plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+3*FRstd), "--b")
+                        ylabel("Occ Norm FR")
+                        xlabel("Lin Pos (cm)")
+                        title(sprintf("Traj %d",tr))
+                    end
+                    pause
+                    close
+                end
+
+
+            end
+
+        end
+        
+    end
+end
 
 
 
