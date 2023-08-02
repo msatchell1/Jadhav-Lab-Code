@@ -8,7 +8,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'linfields01','cellinfo','spikes01','pos01','sws01','rem01'};
+filetypes = {'cellinfo','spikes01','pos01','sleep01','waking01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -313,12 +313,10 @@ for r = 1:size(posData,2)
     end
 end
 
-edges = linspace(5, 55, sqrt(size(allVelData,1))); % There are very few velocity values above 55
+edges = linspace(0, max(allVelData), sqrt(size(allVelData,1)));
 figure;
 histogram(allVelData, edges)
-title("Velocities Across all Rats and Epochs")
-ylabel("Count")
-xlabel("Velocity (cm/s)")
+title("Velocities Across ")
 
 
 % %% I need to plot velocity with the times I have designated as "run" to check that 
@@ -511,8 +509,6 @@ for s1 = 1:size(FR_allStates,1)
 end
 
 
-
-%% Identify place cells and label them on the scatter plots
 
 
 
