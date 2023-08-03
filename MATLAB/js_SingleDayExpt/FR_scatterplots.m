@@ -52,18 +52,6 @@ C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
 %% Split the firing rates into the following states during rest epochs:
 % Behavior(on track), wake during sleep sessions, sleep, NREM, and REM.
 
-spikes_idx = find(contains(filetypes,'spikes01')); % Gets row index of spike data in C_alldata.
-% Note that indexing like this is only supposed to give one index as a
-% result.
-if isempty(spikes_idx)
-    error("spikes01 data must be loaded to run this analysis.")
-end
-
-cellinfo_idx = find(contains(filetypes,'cellinfo'));
-if isempty(cellinfo_idx)
-    error("cellinfo data must be loaded to run this analysis.")
-end
-
 % ----------------------------------
 % To remove states from the analysis, simply take them out of stateFiles
 % and stateNames. They do not need to be removed from filetypes.
@@ -83,19 +71,33 @@ stateFiles = {'sws','rem'};
 % stateNames = {'sleep','wake','sws','rem','run','still'};
 stateNames = {'sws','rem','run','still'};
 
-% ----------------------------------
+brainAreas = {'CA1','PFC'}; % Brain areas to split data into. Should be only CA1 and PFC
+
+% -----------------------------------------------------
+
+spikes_idx = find(contains(filetypes,'spikes01')); % Gets row index of spike data in C_alldata.
+% Note that indexing like this is only supposed to give one index as a
+% result.
+if isempty(spikes_idx)
+    error("spikes01 data must be loaded to run this analysis.")
+end
+
+cellinfo_idx = find(contains(filetypes,'cellinfo'));
+if isempty(cellinfo_idx)
+    error("cellinfo data must be loaded to run this analysis.")
+end
 
 states_idx = find(contains(filetypes, stateFiles));
-
-% for s = 1:length(stateNames)
-%     states_idx(s) = find(contains(filetypes, stateNames{s}));
-% end
 if isempty(states_idx)
     error("at least one of the following rest state data must be loaded: \n +" + ...
         "   sleep01, waking01, sws01, rem01, or rippletime01.")
 end
 
-brainAreas = {'CA1','PFC'}; % Brain areas to split data into. Should be only CA1 and PFC
+linf_idx = find(contains(filetypes,'linfields'));
+if isempty(linf_idx)
+    error("linfields data must be loaded to run this analysis.")
+end
+
 
 % Extract spike data
 C_allspikes = C_alldata(spikes_idx,:);
@@ -107,7 +109,28 @@ C_allspikes = C_alldata(spikes_idx,:);
 % area from C_allinfo. For now I am going to choose the first option.
 C_allinfo = C_alldata(cellinfo_idx,:);
 
-% Add 'area' field to the spike data for later sorting.
+% Store all state data in one array. The order of the data
+% stored in rows is that of stateNames.
+C_allstates = C_alldata(states_idx,:);
+
+% Linfield data
+C_alllinf = C_alldata(linf_idx,:);
+
+% Add 'area' field to the spike data for later sorting. Also add place
+% field data such as mean and std FR, and sparsity for each trajectory.
+% linfields must be loaded to add the placefield data
+                        trData = nrnsAllTets{1,nrn}{1,tr};
+                        FRmean = mean(trData(:,5),1,'omitnan');
+                        FRstd = std(trData(:,5),1,'omitnan');
+
+                        % calc sparsity
+                        totOcc = sum(trData(:,6),1); % Total time spent on track
+                        probOcc = trData(:,6)./totOcc; % Probability of occupying each spot on the trajectory
+                        pixrate = trData(:,7)./trData(:,6); % Firing rate normalized by occupancy
+                        sum1 = sum(probOcc.*pixrate);
+                        sum2 = sum(probOcc.*(pixrate.^2));
+                        sparsity = (sum1^2)/sum2;
+
 for r = 1:length(C_allspikes)
     for e = 1:length(C_allspikes{1,r})
         for tet = 1:length(C_allspikes{1,r}{1,e})
@@ -130,14 +153,13 @@ for r = 1:length(C_allspikes)
 end
 
 
-% Store all state data in one array. The order of the data
-% stored in rows is that of stateNames.
-C_allstates = C_alldata(states_idx,:);
-
 % Identify times at which velocity is above a threshold and fill a cell array
 % full of structs that matches that of the other states like REM, NREM,
 % etc. This is done by create_runstate.m.
 pos_idx = find(contains(filetypes,'pos01'));
+if isempty(pos_idx)
+    error("pos01 data must be loaded to run this analysis.")
+end
 C_runstate = create_runstate(C_alldata(pos_idx,:));
 % Do the same for times when vel < threshold.
 C_stillstate = create_stillstate(C_alldata(pos_idx,:));
@@ -415,7 +437,7 @@ for s1 = 1:size(FR_allStates,1)
 
         for a = 1:length(brainAreas)
             figure;
-            sgtitle(sprintf("Neuron FRs | %s vs. All States | %s",stateNames{s1},brainAreas{a}))
+            sgtitle(sprintf("Neuron FRs each Epoch| %s vs. all States | %s",stateNames{s1},brainAreas{a}))
             for s2 = 1:size(FR_allStates,1)
                 
                 % Form vectors of firing rates for the two states being plotted against
@@ -520,7 +542,8 @@ end
 % Cells must satisfy threshold values for these measures:
 % Mean firing rate - below 8 Hz or so (double check).
 % Peak firing rate - Must be x number of std above mean FR.
-% Sparsity
+% Number of spikes - More than 100 spikes.
+% Sparsity - From my observations, less than 0.5 seems good
 % Spatial specificity
 % Spatial coherence
 % 
@@ -535,9 +558,8 @@ for r = 1:size(linfData,2)
             nrnsAllTets = [linfData{1,r}{1,e}{:}]; % Gets all neurons for one rat and one epoch.
 
             for nrn = 1:size(nrnsAllTets,2)
-                
+
                 if ~isempty(nrnsAllTets{1,nrn})
-                    
                     figure;
                     sgtitle(sprintf("Epoch %d Nrn %d",e,nrn))
                     for tr = 1:4 % 4 different trajectories
@@ -545,16 +567,25 @@ for r = 1:size(linfData,2)
                         FRmean = mean(trData(:,5),1,'omitnan');
                         FRstd = std(trData(:,5),1,'omitnan');
 
-                        subplot(2,2,tr)
+                        % calc sparsity
+                        totOcc = sum(trData(:,6),1); % Total time spent on track
+                        probOcc = trData(:,6)./totOcc; % Probability of occupying each spot on the trajectory
+                        pixrate = trData(:,7)./trData(:,6); % Firing rate normalized by occupancy
+                        sum1 = sum(probOcc.*pixrate);
+                        sum2 = sum(probOcc.*(pixrate.^2));
+                        sparsity = (sum1^2)/sum2;
+
+                        ax(tr) = subplot(2,2,tr);
                         hold on;
-                        plot(trData(:,1), trData(:,5), 'k')
+                        plot(trData(:,1), trData(:,7)./trData(:,6), 'k')
                         plot(trData(:,1), ones(size(trData(:,1)))*FRmean, "--r")
                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+FRstd), "--b")
                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+2*FRstd), "--b")
                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+3*FRstd), "--b")
                         ylabel("Occ Norm FR")
                         xlabel("Lin Pos (cm)")
-                        title(sprintf("Traj %d",tr))
+                        title(sprintf("Traj %d | spar=%.4f",tr,sparsity))
+                        linkaxes(ax,'y')
                     end
                     pause
                     close
@@ -564,10 +595,74 @@ for r = 1:size(linfData,2)
             end
 
         end
-        
+
     end
 end
 
+
+% 
+% for r = 1:size(linfData,2)
+%     for e = 1:size(linfData{1,r},2)
+% 
+%         if ~isempty(linfData{1,r}{1,e}) % Goes into behavioral epochs only.
+% 
+%             nrnsAllTets = [linfData{1,r}{1,e}{:}]; % Gets all neurons for one rat and one epoch.
+% 
+%             for nrn = 1:size(nrnsAllTets,2)
+% 
+%                 if ~isempty(nrnsAllTets{1,nrn})
+% 
+% 
+%                     for tr = 1:4 % 4 different trajectories
+%                         figure;
+%                         sgtitle(sprintf("Epoch %d Nrn %d Traj %d",e,nrn,tr))
+%                         trData = nrnsAllTets{1,nrn}{1,tr};
+%                         FRmean = mean(trData(:,5),1,'omitnan');
+%                         FRstd = std(trData(:,5),1,'omitnan');
+% 
+%                         subplot(2,2,1);
+%                         hold on;
+%                         plot(trData(:,1), trData(:,5), 'k')
+%                         plot(trData(:,1), ones(size(trData(:,1)))*FRmean, "--r")
+%                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+FRstd), "--b")
+%                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+2*FRstd), "--b")
+%                         plot(trData(:,1), ones(size(trData(:,1)))*(FRmean+3*FRstd), "--b")
+%                         ylabel("Occ Norm FR")
+%                         xlabel("Lin Pos (cm)")
+%                         title("Occ Norm FR")
+% 
+%                         subplot(2,2,2)
+%                         hold on;
+%                         plot(trData(:,1), trData(:,6), 'b')
+%                         xlabel("Lin Pos (cm)")
+%                         title("Smooth Occ")
+% 
+%                         subplot(2,2,3)
+%                         hold on;
+%                         plot(trData(:,1), trData(:,7), 'r')
+%                         xlabel("Lin Pos (cm)")
+%                         title("Smooth Spike Count")
+% 
+%                         subplot(2,2,4)
+%                         hold on;
+%                         plot(trData(:,1), trData(:,7)./trData(:,6))
+%                         xlabel("Lin Pos (cm)")
+%                         title("Occ/SC")
+% 
+%                         pause
+%                         close
+% 
+%                     end
+% 
+%                 end
+% 
+% 
+%             end
+% 
+%         end
+% 
+%     end
+% end
 
 
 

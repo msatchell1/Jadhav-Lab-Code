@@ -111,8 +111,10 @@
 % There are four columns here representing the four W-track trajectories.
 % Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
 % Under each trajectory is the place field data for that cell on that
-% trajectory. Column 1 is the distance in cm along that linearized
-% trajectory. Column 5 contains the occupancy normalized smooth firing rate.
+% trajectory with 7 columns of data: col 1 is the distance in cm along that linearized
+% trajectory, col 2 occupancy, col 3 spike count, col 4 occupancy normalized
+% firing rate, col 5 smoothed occupancy normalized firing rate, col 6
+% smoothed occupancy, col 7 smoothed spike count.
 %
 % LFP files:
 % day / epoch / tetrode 
