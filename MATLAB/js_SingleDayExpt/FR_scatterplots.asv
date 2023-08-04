@@ -366,22 +366,22 @@ end
 
 %% Plot histogram of velocities
 
-% posData = C_alldata(find(contains(filetypes,'pos01')),:);
-% allVelData = [];
-% for r = 1:size(posData,2)
-%     for e = 1:size(posData{1,r},2)
-% 
-%         allVelData = [allVelData; posData{1,r}{1,e}.data(:,5)];
-% 
-%     end
-% end
-% 
-% edges = linspace(5, 55, sqrt(size(allVelData,1))); % There are very few velocity values above 55
-% figure;
-% histogram(allVelData, edges)
-% title("Velocities Across all Rats and Epochs")
-% ylabel("Count")
-% xlabel("Velocity (cm/s)")
+posData = C_alldata(find(contains(filetypes,'pos01')),:);
+allVelData = [];
+for r = 1:size(posData,2)
+    for e = 1:size(posData{1,r},2)
+        
+        allVelData = [allVelData; posData{1,r}{1,e}.data(:,5)];
+
+    end
+end
+
+edges = linspace(5, 55, sqrt(size(allVelData,1))); % There are very few velocity values above 55
+figure;
+histogram(allVelData, edges)
+title("Velocities Across all Rats and Epochs")
+ylabel("Count")
+xlabel("Velocity (cm/s)")
 
 
 % %% I need to plot velocity with the times I have designated as "run" to check that 
