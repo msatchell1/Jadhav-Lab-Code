@@ -28,7 +28,7 @@ for tr = 1:4
     % Peak FR must be above 2 stds from the mean.
     if peakRate > meanRate+2*stdRate
         % Mean rate must be below 10 Hz.
-        if meanRate < 10
+        if meanRate < 100
             % Peak rate must be above 3 Hz
             if peakRate > 3
                 % Sparsitty must be below 0.5

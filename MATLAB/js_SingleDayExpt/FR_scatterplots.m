@@ -210,7 +210,10 @@ end
 
 
 
-%% Create firing rate matrices and place cell sum matrix
+
+% ------------------------------------------------------------------
+
+% Create firing rate matrices and place cell sum matrix
 
 % Cell array to hold matrices for each brain region (in brainArea order).
 % Matrices contain mean spike rates by epoch, not discriminating by state. 
@@ -263,6 +266,17 @@ for r = 1:length(C_allspikes)
     end
 end
 
+
+% Separating into rest and behavior epoch data.
+behEpochs = 2:2:size(FR_byEpoch{1},2);
+restEpochs = 1:2:size(FR_byEpoch{1},2);
+FRbeh = {}; FRrest = {};
+for a = 1:size(FR_byEpoch,2)
+    FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
+    FRrest{a} = FR_byEpoch{a}(:,restEpochs);
+end
+
+
 % Create isPC_byEpoch, a similar matrix but filled with 1s and 0s denoting
 % if the neuron is a place cell or not. Also, since only NaNs are in
 % PCsum_byEpoch for rest epochs, a neuron in a rest epoch is considered a
@@ -276,16 +290,6 @@ for a = 1:length(brainAreas)
             isPC_byEpoch{a}(:,col) = isPC_byEpoch{a}(:,col-1);
         end
     end
-end
-
-
-% Separating into rest and behavior epoch data.
-behEpochs = 2:2:size(FR_byEpoch{1},2);
-restEpochs = 1:2:size(FR_byEpoch{1},2);
-FRbeh = {}; FRrest = {};
-for a = 1:size(FR_byEpoch,2)
-    FRbeh{a} = FR_byEpoch{a}(:,behEpochs);
-    FRrest{a} = FR_byEpoch{a}(:,restEpochs);
 end
 
 
@@ -390,6 +394,8 @@ for a = 1:length(brainAreas)
         end
     end
 end
+
+
 
 
 %% Plot histogram of velocities
@@ -870,26 +876,24 @@ end
 
 
 % Now actually plot new scatter plots
-PCthr = 1;
 
-plotindv = 0;
 plotsubplots = 1;
 
 % stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
 stateColors = [[0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
 
 
-while(1) % Prompt user to determine whether or not to continue with plotting.
-    usri = input(sprintf('%d figures will be created. Do you wish to continue? y/n :',...
-        plotindv*(size(FR_allStates,1)^2)*length(brainAreas) + plotsubplots*size(FR_allStates,1)*length(brainAreas)),'s');
-    if strcmpi(usri,'y')
-        disp("Plotting figures...")
-        break;
-    else
-        disp("Execution stopped.")
-        return
-    end
-end
+% while(1) % Prompt user to determine whether or not to continue with plotting.
+%     usri = input(sprintf('%d figures will be created. Do you wish to continue? y/n :',...
+%         plotindv*(size(FR_allStates,1)^2)*length(brainAreas) + plotsubplots*size(FR_allStates,1)*length(brainAreas)),'s');
+%     if strcmpi(usri,'y')
+%         disp("Plotting figures...")
+%         break;
+%     else
+%         disp("Execution stopped.")
+%         return
+%     end
+% end
 
 % A note on my scatter plots: The matrices containing the data have epochs
 % across the columns, and rows are concatenated neuron data for all rats.
@@ -908,7 +912,7 @@ for s1 = 1:size(FR_allStates,1)
             
             
             figure;
-            sgtitle(sprintf("Neuron FRs each Epoch| %s vs. all States | %s",stateNames{s1},brainAreas{a}))
+            sgtitle(sprintf("Neuron FRs each Epoch (black=PCs) | %s vs. all States | %s",stateNames{s1},brainAreas{a}))
             for s2 = 1:size(FR_allStates,1)
                 
                 % Form vectors of firing rates for the two states being plotted against
@@ -948,14 +952,40 @@ for s1 = 1:size(FR_allStates,1)
                     s2isPCmat = isPC_byEpoch{1,a}(:,restEpochs);
                 end
                 
+                
+                % I want to separate place cells and non-PCs. But, to
+                % maintain neuronal identity in the matrices, I can't just
+                % remove one category or the other from sxData because
+                % there can be different numbers of place cells between two
+                % states (actually, because whether or not a cell is
+                % considered a PC during a rest epoch is taken from the
+                % previous behavioral epoch, and because in the scatter
+                % plots behavioral epochs are compared to the subsequent
+                % rest epoch, it would probably work to just remove the
+                % unwanted neurons from the matrices before plotting).
+                % However, to be safe, and in case this ever changes, I
+                % want to replace unwanted neurons in sxData with NaN to be
+                % sure that no misalignment happens between s1Data and
+                % s2Data.
+                % Create matrices with only PC data.
+                s1DataPCs = s1Data;
+                s1DataPCs(~s1isPCmat) = NaN;
+                s2DataPCs = s2Data;
+                s2DataPCs(~s2isPCmat) = NaN;
+                % Create matrices with only non-PC data.
+                s1DataNonPCs = s1Data;
+                s1DataNonPCs(s1isPCmat) = NaN;
+                s2DataNonPCs = s2Data;
+                s2DataNonPCs(s2isPCmat) = NaN;
 
 
                 % Note that plot only includes data points that have no NaN
-                % values in x or y, so if a neuron is only active in one
-                % state and not the other, this data is not plotted.
+                % values in x or y, so if a neuron/epoch is only active in one
+                % state and not the other, this neuron/epoch is not plotted.
                 subplot(ceil(size(FR_allStates,1)/2),2,s2);
                 hold on;
-                plot(s1Data(:),s2Data(:), '.', Color=stateColors(s2,:), MarkerSize=2);
+                plot(s1DataNonPCs(:),s2DataNonPCs(:), '.', Color=stateColors(s2,:), MarkerSize=2);
+                plot(s1DataPCs(:),s2DataPCs(:), '.', Color='k', MarkerSize=2);
                 plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
                 xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
                 ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
@@ -963,31 +993,161 @@ for s1 = 1:size(FR_allStates,1)
             end
         end
     end
-    
-    
-    if plotindv % Individual FR plots
-    
-        for a = 1:length(brainAreas)
-            for s2 = 1:size(FR_allStates,1)
-                              
-                s1Data = FR_allStates{s1,a};
-                s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
-            
-                s1Data = s1Data(:,restEpochs);
-                s2Data = s2Data(:,restEpochs);
-
-                
-                figure;
-                hold on;
-                plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
-                xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
-                ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
-                title(sprintf("%s vs. %s | %s",stateNames{s1},stateNames{s2},brainAreas{a}))
-                set(gca, 'XScale', 'log', 'YScale', 'log');
-            end
-        end
-    
-    end
-
 end
 
+
+
+
+
+%% Plot place cells color coded by spatial coverage
+
+% I want to try and bring the information from the neurons in C_allspikes
+% in a different way than I did for the isPC information above. This time,
+% I want to loop through all neurons of all rats, effectively going row by row
+% in a FR_allStates submatrix. This way I can keep track of which neuron has
+% which properties and easily add them to the plot without having to make a
+% separate matrix all the way back when FR_byEpoch is created...
+% But... I'm not sure how to do this. In the end I need a matrix or array
+% that has the coverage for each neuron in the same order as FR_byEpoch.
+% So, until I can think of a better way, I am going to create the matrix in
+% the same way as FR_byEpoch.
+
+% Because there are four measures of sparsity (one for each traj) for each
+% neuron, I am going to use isPlaceCell to tell me which trajs a neuron has
+% a place field on, and then average the spatial coverage from all those
+% trajs to get a single measure of coverage for each neuron.
+cov_byEpoch = cell(1,length(brainAreas));
+
+for r = 1:size(C_allspikes,2)
+
+    for a = 1:length(brainAreas)
+
+        ratCovs = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
+
+        for e = 1:size(C_allspikes{1,r},2)
+            
+            nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn data from all tets.
+    
+            for nrn = 1:length(nrnsAlltets)
+                % isfield also returns false if the struct does not exist
+                if isfield(nrnsAlltets{nrn},'isPlaceCell') && strcmp(nrnsAlltets{nrn}.area, brainAreas{a}) % If neuron is in wanted brain region
+                
+                    % Multiply coverage by isPlaceCell to only get spatial
+                    % coverage of trajectories that have place fields.
+                    PCcov = nonzeros(nrnsAlltets{nrn}.isPlaceCell.*nrnsAlltets{nrn}.traj_coverage);
+                    ratCovs(nrn,e) = mean(PCcov); % The mean coverage from all place field trajs.
+
+                end
+
+            end
+        end
+
+        cov_byEpoch{a} = [cov_byEpoch{a}; ratCovs];
+    end
+end
+
+% Fill in rest epoch with previous beh epoch data.
+for a = 1:length(brainAreas)
+    for col = 1:size(cov_byEpoch{a},2)
+        if ismember(col,restEpochs) && col > 1
+            cov_byEpoch{a}(:,col) = cov_byEpoch{a}(:,col-1);
+        end
+    end
+end
+
+
+
+plotsubplots = 1;
+
+% stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
+stateColors = [[0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
+
+
+for s1 = 1:size(FR_allStates,1)
+    
+    if plotsubplots
+
+        for a = 1:length(brainAreas)
+            
+            
+            figure;
+            sgtitle(sprintf("Place Cell FRs and Coverage for each Epoch  | %s vs. all States | %s",stateNames{s1},brainAreas{a}))
+            for s2 = 1:size(FR_allStates,1)
+                
+                % Form vectors of firing rates for the two states being plotted against
+                % each other, making sure to perserve the cell identity in each vector.
+                % Each vector should hold info from all epochs.                
+                s1Data = FR_allStates{s1,a};
+                s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
+
+
+
+                % For run and still states I only want the behavioral
+                % epochs. All other states I want rest epochs.
+                if any(contains(['run','still'],stateNames{s1})) && any(contains(['run','still'],stateNames{s2}))
+                    s1Data = s1Data(:,behEpochs);
+                    s2Data = s2Data(:,behEpochs);
+                    s1isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                    s2isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                    s1covmat = cov_byEpoch{1,a}(:,behEpochs);
+                    s2covmat = cov_byEpoch{1,a}(:,behEpochs);
+                elseif any(contains(['run','still'],stateNames{s1}))
+                    s1Data = s1Data(:,behEpochs);
+                    s2Data = s2Data(:,restEpochs(2:end));
+                    s1isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                    s2isPCmat = isPC_byEpoch{1,a}(:,restEpochs(2:end));
+                    s1covmat = cov_byEpoch{1,a}(:,behEpochs);
+                    s2covmat = cov_byEpoch{1,a}(:,restEpochs(2:end));
+                elseif any(contains(['run','still'],stateNames{s2}))
+                    s1Data = s1Data(:,restEpochs(2:end));
+                    s2Data = s2Data(:,behEpochs);
+                    s2isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                    s1isPCmat = isPC_byEpoch{1,a}(:,restEpochs(2:end));
+                    s2covmat = cov_byEpoch{1,a}(:,behEpochs);
+                    s1covmat = cov_byEpoch{1,a}(:,restEpochs(2:end));
+                else
+                    s1Data = s1Data(:,restEpochs);
+                    s2Data = s2Data(:,restEpochs);
+                    s1isPCmat = isPC_byEpoch{1,a}(:,restEpochs);
+                    s2isPCmat = isPC_byEpoch{1,a}(:,restEpochs);
+                    s1covmat = cov_byEpoch{1,a}(:,restEpochs);
+                    s2covmat = cov_byEpoch{1,a}(:,restEpochs);
+                end
+                
+                
+                % Create matrices with only PC data.
+                s1DataPCs = s1Data;
+                s1DataPCs(~s1isPCmat) = NaN;
+                s2DataPCs = s2Data;
+                s2DataPCs(~s2isPCmat) = NaN;
+
+                % The fact that a neuron has a value in cov_byEpoch means
+                % that it has at least one traj with a place field, but we
+                % want to be able to adjust the traj threshold PCthr, so we
+                % will filter the coverage data by the isPC data.
+                s1covmat(~s1isPCmat) = NaN;
+                s2covmat(~s2isPCmat) = NaN;
+
+                % The spatial coverage valuyes should be the same between
+                % the two states, but lets average just in case.
+                catMat = cat(3,s1covmat,s2covmat);
+                colorCovMat = mean(catMat,3);
+
+
+                subplot(ceil(size(FR_allStates,1)/2),2,s2);
+                hold on;
+                scatter(s1DataPCs(:),s2DataPCs(:), 30, colorCovMat(:),'.');
+                c = colorbar;
+                c.Limits = [0,0.5];
+                colormap jet
+                plot(min(s2Data(:)):max(s2Data(:)), min(s2Data(:)):max(s2Data(:)),'k')
+                xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
+                ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
+                set(gca, 'XScale', 'log', 'YScale', 'log');
+
+                
+
+            end
+        end
+    end
+end
