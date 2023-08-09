@@ -608,7 +608,7 @@ end
 
 
 
-%% Identify place cells and interneurons and label them on the scatter plots
+%% Identify place cells and label them on the scatter plots
 
 % How blake identifies place cells:
 % He did a lot of research and found that there is no concensus on how to
@@ -907,7 +907,7 @@ for s1 = 1:size(FR_allStates,1)
         
         
         figure;
-        sgtitle(sprintf("Neuron FRs each Epoch (black=PC, brown=int) | %s vs. all States | %s",stateNames{s1},brainAreas{a}))
+        sgtitle(sprintf("Neuron FRs each Epoch (black=PC) | %s vs. all States | %s",stateNames{s1},brainAreas{a}))
         for s2 = 1:size(FR_allStates,1)
             
             % Form vectors of firing rates for the two states being plotted against
