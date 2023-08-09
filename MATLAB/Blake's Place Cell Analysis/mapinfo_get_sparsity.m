@@ -1,5 +1,9 @@
 function sparsity=mapinfo_get_sparsity(spmap,dwmap,numrow,numcol)
 % calculate sparsity measure as per Skaggs and McNaughton (1996)
+% spmap = spike map (spikes per spatial bin, spatial bins being environment divided into N x M bins)
+% dwmap = dwell or occupancy map, same size as above but time spent in each bin
+% numrow numcol is size of binned environment
+% pfmap is placefield map
 
 % get mean rate 
 dwsum=sum(sum(dwmap));
