@@ -1,10 +1,5 @@
-% This script will look at raster plots of populations. I want to see SWR
-% events in a population of cells. To do this, I will need to sort cells by
-% the peaks of their firing fields and plot them in a raster with the SWR
-% times marked. 
-
-% Maybe I can also look for theta sequences during the task performance
-
+% This script will dive a bit into ripples of both behavioral and rest
+% epochs. 
 
 %% Load data
 
@@ -107,38 +102,23 @@ behEpochs = 2:2:17;
 restEpochs = 1:2:17;
 
 
-%% Plot spike width vs firing rate to identify interneurons
-
-% % Figuring out which rats have spikewidth data in cellinfo. Ony rat 3, KL8,
-% % has any data. And only partial.
-% figure;
-% hold on;
-% 
-% for r = 1:size(C_allinfo,2)
-% 
-%     swRat = [];
-% 
-%     for e = 1:size(C_allinfo{1,r},2)
-% 
-%         nrnsAlltets = [C_allspikes{1,r}{1,e}{:}];
-% 
-%         for nrn = 1:size(nrnsAlltets,2)
-% 
-%             if isfield(nrnsAlltets{nrn}, 'spikewidth')
-%                 swRat(end+1) = nrnsAlltets{nrn}.spikewidth;
-%             else
-%                 swRat(end+1) = 0;
-%             end
-% 
-% 
-%         end
-%     end
-% 
-%     plot(ones(size(swRat))*r, swRat, '.')
-% 
-% end
 
 
+%% Basic ripple analyses
 
+ripDurs = zeros([size(C_allript,2), 17]);
+for r = 1:size(C_allript,2)
+    for e = 1:size(C_allript{1,r},2)
+        ripDurs(r,e) = C_allript{1,r}{1,e}.total_duration;
 
-%% Basic 
+    end
+end
+
+figure;
+hold on;
+plot(behEpochs,mean(ripDurs(:,behEpochs),1))
+plot(restEpochs,mean(ripDurs(:,restEpochs),1))
+legend("beh","rest")
+title("Total Ripple Duration per Epoch")
+ylabel("Epoch")
+xlabel("Total Duration (s)")
