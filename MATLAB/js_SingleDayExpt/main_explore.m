@@ -97,7 +97,7 @@
 % rippletime - contains start and end times for fully processed ripples. These are ripples
 % that have been detected across the multiple ripple-detecting tetrodes in
 % the CA1 pyramidal layer. This excludes some ripple events based
-% on rat velocity. Note the rippletime file is missing for most animals.
+% on rat velocity.
 
 
 % More detailed information on the format of specific file types is as

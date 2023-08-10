@@ -8,7 +8,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'linfields01','cellinfo','spikes01','pos01','sws01','rem01'};
+filetypes = {'linfields01','cellinfo','spikes01','pos01','rippletime01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -16,7 +16,7 @@ C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes
 
 disp("Loading new animal data... ")
 for r = 1:length(load_rats)
-    fprintf("Loaded animal: %s \n",load_rats{r})
+    fprintf("Loading animal: %s \n",load_rats{r})
 
     for ft = 1:length(filetypes)    
 
@@ -62,14 +62,14 @@ C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
 % C_allstates or later FR_allStates. Thus, stateNames MUST MATCH ORDER
 % THESE FILES ARE LISTED IN filetypes.
 % stateFiles = {'sleep','waking','sws','rem'};
-stateFiles = {'sws','rem'};
+stateFiles = {'rippletime','sws','rem'};
 
 % Names to be used when plotting of the different states. Note, this array
 % can be larger than stateFiles because some stateFiles can be used to
 % produce multiple states, such as pos01 being used for 'run' and 'still'.
 % This list must match the order of states in C_allstates.
 % stateNames = {'sleep','wake','sws','rem','run','still'};
-stateNames = {'sws','rem','run','still'};
+stateNames = {'ripple','sws','rem','run','still'};
 
 brainAreas = {'CA1','PFC'}; % Brain areas to split data into. Should be only CA1 and PFC
 
@@ -877,7 +877,7 @@ end
 % Now actually plot new scatter plots
 
 % stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
-stateColors = [[0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
+stateColors = [[0 0.4470 0.7410]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
 
 
 % while(1) % Prompt user to determine whether or not to continue with plotting.

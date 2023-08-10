@@ -101,10 +101,7 @@ C_alllinf = C_alldata(linf_idx,:);
 C_runstate = create_runstate(C_alldata(pos_idx,:));
 C_stillstate = create_stillstate(C_alldata(pos_idx,:));
 C_allstates = [C_allstates; C_runstate; C_stillstate];
-C_allript = C_alldata(rt_idx,:);
-
-behEpochs = 2:2:17;
-restEpochs = 1:2:17;
+C_allrt
 
 
 %% Plot spike width vs firing rate to identify interneurons
