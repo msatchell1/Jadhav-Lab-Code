@@ -8,7 +8,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'linfields01','cellinfo','spikes01','pos01','rippletime01','sws01','rem01'};
+filetypes = {'linfields01','cellinfo','spikes01','pos01','sws01','rem01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -62,14 +62,14 @@ C_alldata = clip_17_epochs(C_alldata); % removes extra epoch data.
 % C_allstates or later FR_allStates. Thus, stateNames MUST MATCH ORDER
 % THESE FILES ARE LISTED IN filetypes.
 % stateFiles = {'sleep','waking','sws','rem'};
-stateFiles = {'rippletime','sws','rem'};
+stateFiles = {'sws','rem'};
 
 % Names to be used when plotting of the different states. Note, this array
 % can be larger than stateFiles because some stateFiles can be used to
 % produce multiple states, such as pos01 being used for 'run' and 'still'.
 % This list must match the order of states in C_allstates.
 % stateNames = {'sleep','wake','sws','rem','run','still'};
-stateNames = {'ripple','sws','rem','run','still'};
+stateNames = {'sws','rem','run','still'};
 
 brainAreas = {'CA1','PFC'}; % Brain areas to split data into. Should be only CA1 and PFC
 
@@ -1248,6 +1248,152 @@ for s1 = 1:size(FR_allStates,1)
             xlabel(sprintf("%s Mean FR (Hz)",stateNames{s1}))
             ylabel(sprintf("%s Mean FR (Hz)", stateNames{s2}))
             set(gca, 'XScale', 'log', 'YScale', 'log');
+        end
+    end
+end
+
+
+
+%% Plot fold change in FR with spatial coverage and peak FR
+
+% Of course this can only be done for place cells.
+
+cov_byEpoch = cell(1,length(brainAreas));
+peak_byEpoch = cell(1,length(brainAreas));
+
+for r = 1:size(C_allspikes,2)
+
+    for a = 1:length(brainAreas)
+
+        ratCovs = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
+        ratPeaks = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
+
+        for e = 1:size(C_allspikes{1,r},2)
+            
+            nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn data from all tets.
+    
+            for nrn = 1:length(nrnsAlltets)
+                % isfield also returns false if the struct does not exist
+                if isfield(nrnsAlltets{nrn},'isPlaceCell') && strcmp(nrnsAlltets{nrn}.area, brainAreas{a}) % If neuron is in wanted brain region
+                
+                    % Multiply coverage by isPlaceCell to only get spatial
+                    % coverage of trajectories that have place fields.
+                    PCcov = nonzeros(nrnsAlltets{nrn}.isPlaceCell.*nrnsAlltets{nrn}.traj_coverage);
+                    ratCovs(nrn,e) = mean(PCcov); % The mean coverage from all place field trajs.
+
+                    % Peaks of trajs with place fields
+                    PCpeak = nonzeros(nrnsAlltets{nrn}.isPlaceCell.*nrnsAlltets{nrn}.traj_FRpeaks);
+                    ratPeaks(nrn,e) = mean(PCpeak);
+
+                end
+
+            end
+        end
+
+        cov_byEpoch{a} = [cov_byEpoch{a}; ratCovs];
+        peak_byEpoch{a} = [peak_byEpoch{a}; ratPeaks];
+    end
+end
+
+% Fill in rest epoch with previous beh epoch data.
+for a = 1:length(brainAreas)
+    for col = 1:size(cov_byEpoch{a},2)
+        if ismember(col,restEpochs) && col > 1
+            cov_byEpoch{a}(:,col) = cov_byEpoch{a}(:,col-1);
+            peak_byEpoch{a}(:,col) = peak_byEpoch{a}(:,col-1);
+        end
+    end
+end
+
+
+
+% Scatter plots for spatial coverage
+
+% stateColors = [[0 0.4470 0.7410]; [1 0.8 0]; [0.5 0.1 1]; [1 0 0]; [0.6 0.9 0]; [0 0.9 1]];
+stateColors = [[0.5 0.1 1]; [1 0 0]; [0.3 1 0.1]; [0 0.9 1]];
+
+for s1 = 1:size(FR_allStates,1)
+
+    for a = 1:length(brainAreas)
+
+
+        figure;
+        sgtitle(sprintf("Place Cell Coverage vs Fold Change in FR| %s vs. all States | %s",stateNames{s1},brainAreas{a}))
+        for s2 = 1:size(FR_allStates,1)
+
+            % Form vectors of firing rates for the two states being plotted against
+            % each other, making sure to perserve the cell identity in each vector.
+            % Each vector should hold info from all epochs.                
+            s1Data = FR_allStates{s1,a};
+            s2Data = FR_allStates{s2,a}; % Data of state to be plotted against.
+
+            % For run and still states I only want the behavioral
+            % epochs. All other states I want rest epochs.
+            if any(contains(['run','still'],stateNames{s1})) && any(contains(['run','still'],stateNames{s2}))
+                s1Data = s1Data(:,behEpochs);
+                s2Data = s2Data(:,behEpochs);
+                s1isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                s2isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                s1covmat = cov_byEpoch{1,a}(:,behEpochs);
+                s2covmat = cov_byEpoch{1,a}(:,behEpochs);
+            elseif any(contains(['run','still'],stateNames{s1}))
+                s1Data = s1Data(:,behEpochs);
+                s2Data = s2Data(:,restEpochs(2:end));
+                s1isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                s2isPCmat = isPC_byEpoch{1,a}(:,restEpochs(2:end));
+                s1covmat = cov_byEpoch{1,a}(:,behEpochs);
+                s2covmat = cov_byEpoch{1,a}(:,restEpochs(2:end));
+            elseif any(contains(['run','still'],stateNames{s2}))
+                s1Data = s1Data(:,restEpochs(2:end));
+                s2Data = s2Data(:,behEpochs);
+                s2isPCmat = isPC_byEpoch{1,a}(:,behEpochs);
+                s1isPCmat = isPC_byEpoch{1,a}(:,restEpochs(2:end));
+                s2covmat = cov_byEpoch{1,a}(:,behEpochs);
+                s1covmat = cov_byEpoch{1,a}(:,restEpochs(2:end));
+            else
+                s1Data = s1Data(:,restEpochs);
+                s2Data = s2Data(:,restEpochs);
+                s1isPCmat = isPC_byEpoch{1,a}(:,restEpochs);
+                s2isPCmat = isPC_byEpoch{1,a}(:,restEpochs);
+                s1covmat = cov_byEpoch{1,a}(:,restEpochs);
+                s2covmat = cov_byEpoch{1,a}(:,restEpochs);
+            end
+
+            % Create matrices with only PC data.
+            s1DataPCs = s1Data;
+            s1DataPCs(~s1isPCmat) = NaN;
+            s2DataPCs = s2Data;
+            s2DataPCs(~s2isPCmat) = NaN;
+
+            % The fact that a neuron has a value in cov_byEpoch means
+            % that it has at least one traj with a place field, but we
+            % want to be able to adjust the traj threshold PCthr, so we
+            % will filter the coverage data by the isPC data.
+            s1covmat(~s1isPCmat) = NaN;
+            s2covmat(~s2isPCmat) = NaN;
+
+            % The spatial coverage values should be the same between
+            % the two states, but lets average just in case.
+            catMat = cat(3,s1covmat,s2covmat);
+            colorCovMat = mean(catMat,3);
+            
+
+
+            s2s1fold = (s2DataPCs-s1DataPCs)./s1DataPCs; % Fold change in state 2 FR with respect to state 1 FR.
+
+
+            subplot(ceil(size(FR_allStates,1)/2),2,s2);
+            hold on;
+            % plot(s2s1fold(:), colorCovMat(:), '.')
+
+            scatter(s2s1fold(:),colorCovMat(:), 20, stateColors(s2,:),'.');
+            % c = colorbar;
+            % clim([0,0.5]);
+            % colormap jet
+            plot(zeros(size(linspace(0,max(colorCovMat(:)),2))), linspace(0,max(colorCovMat(:)),2),'k')
+            xlabel(sprintf("Fold Change in FR (%s-%s)/%s",stateNames{s2},stateNames{s1},stateNames{s1}))
+            ylabel(sprintf("Spatial Coverage"))
+            % set(gca, 'XScale', 'log');
         end
     end
 end

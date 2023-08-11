@@ -130,12 +130,8 @@ restEpochs = 1:2:17;
 % Plot LFP with ripple times above a raster plot of all cells in one rat/epoch
 r = 2; % rat number
 e = 3; % epoch number
-riptet = 7; % tetrode to take LFP from, ideally displays most of the ripples
+riptet = 7; % tetrode to take LFP off of, ideally displays most of the ripples
 
-% Check that rat number, epoch, and tetrode match the loaded file
-load('/mnt/10TBSpinDisk/js_SingleDayExpt/ER1_NEW_direct/EEG/ER1eeg01-03-07.mat')
 
-% I should also order the place cells based on peak firing location along
-% one (or all) of the trajectories.
 
 
