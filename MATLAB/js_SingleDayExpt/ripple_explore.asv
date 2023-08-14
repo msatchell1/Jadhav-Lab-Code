@@ -129,9 +129,45 @@ restEpochs = 1:2:17;
 
 % Plot LFP with ripple times above a raster plot of all cells in one rat/epoch
 r = 2; % rat number
-e = 3; % epoch number
-riptet = 7; % tetrode to take LFP off of, ideally displays most of the ripples
+eStr = "03"; % epoch number
+riptetsStr = {'26','23','25','24', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
+e = str2num(eStr);
+riptets = [26,23,25,24, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
+ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8];
+
+figure;
+hold on;
+ripple_labels = {};
+
+for rt = 1:length(riptets)
+    % CHECK that rat number, epoch, and tetrode match the loaded file
+    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/ER1_NEW_direct/EEG/ER1eegref01-%s-%s.mat",eStr,riptetsStr{rt}))
+    
+    % See main_explore on why I am using eegref instead of eeg.
+    
+    refData = eegref{1,1}{1,e}{1,riptets(rt)};
+    timeRange = (refData.starttime : 1/refData.samprate : refData.endtime)';
+    refV = refData.data/refData.voltage_scaling; % Remove scaling factor
+    refV = refV/1000; % Change from microvolts to millivolts.
+    
+    plot(timeRange, refV+ydisp(rt))
+
+end
+
+% Get ripple time data
+riptData = C_allript{1,r}{1,e};
+for i = 1:length(riptData.starttime)
+    x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
+    y_vertices = [min(refV+ydisp(rt)),min(refV+ydisp(rt)),max(refV),max(refV)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.6, 'EdgeColor','none')
+end
+title(sprintf("Rat %d, Epoch %d",r,e))
+ylabel("Voltage (mV)")
+xlabel("Time (s)")
+legend(riptetsStr)
 
 
+% I should also order the place cells based on peak firing location along
+% one (or all) of the trajectories.
 
 
