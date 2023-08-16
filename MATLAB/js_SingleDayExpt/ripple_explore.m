@@ -170,7 +170,7 @@ restEpochs = 1:2:17;
 % I should also order the place cells based on peak firing location along
 % one (or all) of the trajectories.
 r = 2; % rat number
-eStr = "06"; % epoch number
+eStr = "15"; % epoch number
 riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
 e = str2num(eStr);
 riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
