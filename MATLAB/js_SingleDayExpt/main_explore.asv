@@ -65,7 +65,7 @@
 % phase precession of a population? We can measure with respect to the theta
 % on the reference electrode to get a more universal template of the oscillation.
 % 
-% All the EEG traces are flipped from the actual recorded EEG.
+% All the EEG traces are flipped, 
 % 
 % The delta, gamma, ripple,
 % and theta files are filtered versions of the eeg files. Justin said that
