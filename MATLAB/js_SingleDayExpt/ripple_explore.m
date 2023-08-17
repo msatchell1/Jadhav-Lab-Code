@@ -169,19 +169,36 @@ restEpochs = 1:2:17;
 
 % I should also order the place cells based on peak firing location along
 % one (or all) of the trajectories.
-rStr = "KL8"; % rat name
+rStr = "JS15"; % rat name
 r = find(contains(load_rats,rStr));
 eStr = "03"; % epoch number
 e = str2num(eStr);
 
-% For ER1_NEW
+% % For ER1_NEW
+% % riptetsStr must be double-digit (i.e. must be '02', not '2').
 % riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
 % riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
 % ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8]; % y-displacements. Groupings of LFPs for clear plotting.
 
-riptetsStr = {'09','10', '25','24','15','21','23','22'}; 
-riptets = [9,10, 25,24,15,21,23,22];
-ydisp = [8,7, 4,3,2,1,0,-1];
+% % For KL8
+% riptetsStr = {'09','10', '25','24','15','21','23','22'}; 
+% riptets = [9,10, 25,24,15,21,23,22];
+% ydisp = [8,7, 4,3,2,1,0,-1];
+
+% % For BG1
+% riptetsStr = {'12','10','07','21','22','25'}; 
+% riptets = [12,10,7, 21, 22,25];
+% ydisp = [5,4,3,0,-3,-4];
+
+% % For JS14
+% riptetsStr = {'12','06','08','09','10','15','26'}; 
+% riptets = [12, 6,8,9,10,15,26];
+% ydisp = [7, 4,3,2,1,0,-1];
+
+% For JS15
+riptetsStr = {'05',}; 
+riptets = [5,];
+ydisp = [];
 
 tetcolors = zeros(length(riptets),3);
 
@@ -206,26 +223,28 @@ for rt = 1:length(riptets)
 
 end
 
-nrnTets = [9,10, 25,24,15,21,23,22]; % Tetrodes to plot neurons from.
+nrnTets = riptets; % Tetrodes to plot neurons from.
 nrnCount = 0; % To count the number of plotted neurons in the raster for spacing purposes.
 for i = 1:length(nrnTets)
     tet = nrnTets(i);
-    nrns = [C_allspikes{1,r}{1,e}{1,tet}{:}]; % struct with rows of neurons.
-    if ~isempty(nrns)
-        meanRates = [nrns.meanrate]';
-        isI = meanRates > 7; % Inhibitory neurons.
-        nrns = nrns(~isI); % Remove inhibitory neurons from struct.
-
-        idx = find(riptets == tet);
-
-        for j = 1:length(nrns)
-            nrn = nrns(j);
-            spikeTimes = nrn.data(:,1);
-
-            yvals = zeros(size(spikeTimes)) + (min(ydisp)-2-0.5*nrnCount);
-            plot(spikeTimes, yvals, Color=tetcolors(idx,:), Marker="|", LineStyle="none")
-
-            nrnCount = nrnCount + 1;
+    if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
+        nrns = [C_allspikes{1,r}{1,e}{1,tet}{:}]; % struct with rows of neurons.
+        if ~isempty(nrns)
+            meanRates = [nrns.meanrate]';
+            isI = meanRates > 7; % Inhibitory neurons.
+            nrns = nrns(~isI); % Remove inhibitory neurons from struct.
+    
+            idx = find(riptets == tet);
+    
+            for j = 1:length(nrns)
+                nrn = nrns(j);
+                spikeTimes = nrn.data(:,1);
+    
+                yvals = zeros(size(spikeTimes)) + (min(ydisp)-2-0.5*nrnCount);
+                plot(spikeTimes, yvals, Color=tetcolors(idx,:), Marker="|", LineStyle="none")
+    
+                nrnCount = nrnCount + 1;
+            end
         end
     end
 end
@@ -237,7 +256,7 @@ for i = 1:length(riptData.starttime)
     y_vertices = [min(ydisp)-2-0.5*nrnCount,min(ydisp)-2-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.2, 'EdgeColor','none')
 end
-title(sprintf("Rat %d, Epoch %d",r,e))
+title(sprintf("%s, Epoch %d",rStr,e))
 ylabel("Voltage (mV)")
 xlabel("Time (s)")
 legend(riptetsStr)
