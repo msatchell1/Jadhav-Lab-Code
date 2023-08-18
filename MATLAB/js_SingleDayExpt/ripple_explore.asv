@@ -169,16 +169,25 @@ restEpochs = 1:2:17;
 
 % I should also order the place cells based on peak firing location along
 % one (or all) of the trajectories.
-rStr = "JS14"; % rat name
+rStr = "ZT2"; % rat name
 r = find(contains(load_rats,rStr));
 eStr = "03"; % epoch number
 e = str2num(eStr);
+
+% All riptet ordering is based on epoch 3 for each animal:
 
 % % For ER1_NEW
 % % riptetsStr must be double-digit (i.e. must be '02', not '2').
 % riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
 % riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
 % ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8]; % y-displacements. Groupings of LFPs for clear plotting.
+
+% For ZT2
+riptetsStr = {'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25',...
+    '26','27','28','29','34','36', '31','32','33','35'};
+riptets = [10,11,12,13,14,15,16,17, 18,22,23, 19,20,21,24,25,...
+    26,27,28,29,34,36, 31,32,33,35];
+ydisp = [15:-1:8,  5:-1:-8, -12:-1:-15];
 
 % % For KL8
 % riptetsStr = {'09','10', '25','24','15','21','23','22'}; 
@@ -195,9 +204,27 @@ e = str2num(eStr);
 % riptets = [12, 6,8,9,10,15,26];
 % ydisp = [7, 4,3,2,1,0,-1];
 
-riptetsStr = {}; 
-riptets = [];
-ydisp = [];
+% % For JS15
+% riptetsStr = {'05','06','07','08','09','11','21','24','25'};
+% riptets = [5,6,7,8,9,11,21,24,25];
+% ydisp = [5,4,3,2,1,0,-1,-2,-3];
+
+% % For JS17
+% riptetsStr = {'06','05','24','22','11','12'};
+% riptets = [6,5,24, 22, 11,12];
+% ydisp = [6,5,4,1,-2,-3];
+
+% % For JS21
+% riptetsStr = {'05','06','25','07', '08'};
+% riptets = [5,6,25,7, 8];
+% ydisp = [6,5,4,3,0];
+
+% % For JS34
+% riptetsStr = {'06','07', '11','12', '22','24','25','09'};
+% riptets = [6,7, 11,12, 22,24,25,9];
+% ydisp = [8,7,4,3,0,-1,-2,-3];
+
+
 
 tetcolors = zeros(length(riptets),3);
 
