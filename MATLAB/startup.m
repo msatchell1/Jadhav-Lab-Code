@@ -1,5 +1,5 @@
 cd js_SingleDayExpt/;
 
 
-addpath(genpath("Home/MATLAB Add-Ons/vhlab/vhlab-toolbox-matlab"))
-addpath(genpath("Home/MATLAB Add-Ons/vhlab/vhlab-grading-matlab"))
+addpath(genpath(["/home/mes-jadhav/MATLAB Add-Ons/vhlab/vhlab-toolbox-matlab"]))
+addpath(genpath(["/home/mes-jadhav/MATLAB Add-Ons/vhlab/vhlab-grading-matlab"]))
