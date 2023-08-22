@@ -286,7 +286,7 @@ end
 % without summing overlapping parts, so I will do the next closest thing
 % cut off the peaks at an amplitude of 1. So the overlapping tails of the gaussians
 % will sum, but the peaks will not.
-gwin = gausswin(41); 
+gwin = gausswin(241); 
 % with a smaple rate of 1500 Hz, each time point is 2/3
 % of a milisecond apart, so to get a 4 ms gaussian for each spike, the
 % window must be 6 time points wide. Use an odd number so the gaussian is symmetric
