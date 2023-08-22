@@ -410,7 +410,7 @@ for rt = 1:size(C_riptets{1,r},2)
     plot(timeRange, zEnv)
     plot(times, heights, '.r')
     plot([min(timeRange),max(timeRange)],[peakThr,peakThr], '--k')
-    title(sprintf("thr=%d sep=%d width=%d proms=%d",peakThr,peakSep,peakWidth,peakProm))
+    title(sprintf("thr=%.1f sep=%.1f width=%.1f proms=%.1f",peakThr,peakSep,peakWidth,peakProm))
 
 
 
