@@ -14,7 +14,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01'.
-filetypes = {'rippletime','spikes01'};
+filetypes = {'rippletime','spikes01','tetinfo'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -90,6 +90,11 @@ if isempty(rt_idx)
     error("rippletime data must be loaded to run this analysis.")
 end
 
+ti_idx = find(contains(filetypes,'tetinfo'));
+if isempty(ti_idx)
+    error("tetinfo data must be loaded to run this analysis.")
+end
+
 C_allspikes = C_alldata(spikes_idx,:);
 % C_allinfo = C_alldata(cellinfo_idx,:);
 % C_allstates = C_alldata(states_idx,:);
@@ -98,6 +103,7 @@ C_allspikes = C_alldata(spikes_idx,:);
 % C_stillstate = create_stillstate(C_alldata(pos_idx,:));
 % C_allstates = [C_allstates; C_runstate; C_stillstate];
 C_allriptimes = C_alldata(rt_idx,:);
+C_alltetinfo = C_alldata(ti_idx,:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -170,14 +176,14 @@ restEpochs = 1:2:17;
 
 % Plot LFP, ripple times and spikes of ripple tetrodes and all spikes on
 % those tetrodes.
-rStr = "JS21"; % rat name
+rStr = "JS15"; % rat name
 r = find(contains(load_rats,rStr));
 eStr = "03"; % epoch number
 e = str2num(eStr);
 
 % All riptet ordering is based on epoch 3 for each animal:
 
-% % For ZT2
+% % For ZT2 (might crash matlab)
 % riptetsStr = {'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25',...
 %     '26','27','28','29','34','36', '31','32','33','35'};
 % riptets = [10,11,12,13,14,15,16,17, 18,22,23, 19,20,21,24,25,...
@@ -206,19 +212,19 @@ e = str2num(eStr);
 % ydisp = [7, 4,3,2,1,0,-1];
 
 % % For JS15
-% riptetsStr = {'05','06','07','08','09','11','21','24','25'};
-% riptets = [5,6,7,8,9,11,21,24,25];
-% ydisp = [5,4,3,2,1,0,-1,-2,-3];
+riptetsStr = {'05','06','07','08','09','11','21','24','25'};
+riptets = [5,6,7,8,9,11,21,24,25];
+ydisp = [5,4,3,2,1,0,-1,-2,-3];
 
 % % For JS17
 % riptetsStr = {'06','05','24','22','11','12'};
 % riptets = [6,5,24, 22, 11,12];
 % ydisp = [6,5,4,1,-2,-3];
 
-% For JS21
-riptetsStr = {'05','06','25','07', '08'};
-riptets = [5,6,25,7, 8];
-ydisp = [6,5,4,3,0];
+% % For JS21
+% riptetsStr = {'05','06','25','07', '08'};
+% riptets = [5,6,25,7, 8];
+% ydisp = [6,5,4,3,0];
 
 % % For JS34
 % riptetsStr = {'06','07', '11','12', '22','24','25','09'};
@@ -235,8 +241,8 @@ ripple_labels = {};
 
 for rt = 1:length(riptets)
     % CHECK that rat number, epoch, and tetrode match the loaded file
-    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%seegref01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}))
-    eegripple = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%sripple01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}));
+    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_NEW_direct/EEG/%seegref01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}))
+    eegripple = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_NEW_direct/EEG/%sripple01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}));
 
     % See main_explore on why I am using eegref instead of eeg.
 
@@ -286,11 +292,12 @@ end
 % without summing overlapping parts, so I will do the next closest thing
 % cut off the peaks at an amplitude of 1. So the overlapping tails of the gaussians
 % will sum, but the peaks will not.
-gwin = gausswin(241); 
+gwinlen = 151;
+gwin = gausswin(gwinlen); 
 % with a smaple rate of 1500 Hz, each time point is 2/3
 % of a milisecond apart, so to get a 4 ms gaussian for each spike, the
 % window must be 6 time points wide. Use an odd number so the gaussian is symmetric
-% about the spike. 31 points ~ 20ms
+% about the spike. 30 points = 20ms. 150 = 100ms.
 
 % NOTE I need to be careful when working with spike times. The end time for 
 % the LFP, from the one example I looked at, is 0.033 microseconds longer
@@ -298,9 +305,69 @@ gwin = gausswin(241);
 % timeRange arrays created using the samprate would misalign every 6 or 7
 % time points. So I can't simply interchange them. I will stick with the
 % LFP time range for now.
-nrnTets = riptets; % Tetrodes to plot neurons from.
+
+
+% % Plot only riptet neuron spikes.
+% nrnTets = riptets; % Tetrodes to plot neurons from.
+% nrnCount = 0; % To count the number of plotted neurons in the raster for spacing purposes.
+% nrnsGtrace = [];
+% for i = 1:length(nrnTets)
+%     tet = nrnTets(i);
+%     if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
+%         nrns = [C_allspikes{1,r}{1,e}{1,tet}{:}]; % struct with rows of neurons.
+%         if ~isempty(nrns)
+%             meanRates = [nrns.meanrate]';
+%             isI = meanRates > 7; % Inhibitory neurons.
+%             nrns = nrns(~isI); % Remove inhibitory neurons from struct.
+% 
+%             idx = find(riptets == tet);
+% 
+%             for j = 1:length(nrns)
+%                 nrn = nrns(j);
+%                 spikeTimes = nrn.data(:,1);
+%                 % nrnTimeRange = nrn.timerange(1):1/refData.samprate:nrn.timerange(2);
+% 
+%                 yvals = zeros(size(spikeTimes)) + (min(ydisp)-2-0.5*nrnCount);
+%                 plot(spikeTimes, yvals, Color=tetcolors(idx,:), Marker="|", LineStyle="none")
+% 
+%                 % Convolve this window with the spike train for a neuron of
+%                 % 1s and 0s. There was a problem that was occurring:
+%                 % ismember needs exact equality between the timepoints in
+%                 % spikeTmes and timeRange to identify matches, but the
+%                 % spike times rarely line up with the times in timeRange,
+%                 % regardless of whether the spike or LFP data start and end
+%                 % times are used. So, ismembertol is used to fix this by
+%                 % allowing a 1/samprate window of tolerance for determining
+%                 % equality around each time point.
+%                 isSpike = ismembertol(timeRange,spikeTimes, 1/(2*refData.samprate), DataScale=1);
+%                 gtrace = conv(isSpike,gwin,"same");
+%                 cutgtrace = gtrace > 1; % where to cut off summed peaks
+%                 gtrace(cutgtrace) = 1; % reassign these values to 1.
+%                 plot(timeRange,gtrace+(min(ydisp)-2-0.5*nrnCount),Color=tetcolors(idx,:))
+% 
+%                 nrnCount = nrnCount + 1;
+% 
+%                 % add nrn gaussian trace to matrix
+%                 nrnsGtrace(:,nrnCount) = gtrace;
+%             end
+%         end
+%     end
+% end
+
+
+% Plot neurons from all tetrodes
+nrnTets = []; % Tetrodes to plot neurons from.
+% Sort out CA1 tetrodes from PFC ones.
+for tet = 1:size(C_alltetinfo{1,r}{1,e},2)
+    tetinfo = C_alltetinfo{1,r}{1,e}{1,tet};
+    if isfield(tetinfo,"area") && strcmp(tetinfo.area,"CA1")
+        nrnTets(end+1) = tet;
+    end
+end
+
 nrnCount = 0; % To count the number of plotted neurons in the raster for spacing purposes.
 nrnsGtrace = [];
+nrncolor = [0.8 0.8 0.8];
 for i = 1:length(nrnTets)
     tet = nrnTets(i);
     if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
@@ -318,7 +385,7 @@ for i = 1:length(nrnTets)
                 % nrnTimeRange = nrn.timerange(1):1/refData.samprate:nrn.timerange(2);
 
                 yvals = zeros(size(spikeTimes)) + (min(ydisp)-2-0.5*nrnCount);
-                plot(spikeTimes, yvals, Color=tetcolors(idx,:), Marker="|", LineStyle="none")
+                plot(spikeTimes, yvals, Color=nrncolor, Marker="|", LineStyle="none")
 
                 % Convolve this window with the spike train for a neuron of
                 % 1s and 0s. There was a problem that was occurring:
@@ -333,7 +400,7 @@ for i = 1:length(nrnTets)
                 gtrace = conv(isSpike,gwin,"same");
                 cutgtrace = gtrace > 1; % where to cut off summed peaks
                 gtrace(cutgtrace) = 1; % reassign these values to 1.
-                plot(timeRange,gtrace+(min(ydisp)-2-0.5*nrnCount),Color=tetcolors(idx,:))
+                plot(timeRange,gtrace+(min(ydisp)-2-0.5*nrnCount),Color=nrncolor)
 
                 nrnCount = nrnCount + 1;
 
@@ -346,8 +413,6 @@ end
 
 
 
-
-
 % Get ripple time data
 riptData = C_allriptimes{1,r}{1,e};
 for i = 1:length(riptData.starttime)
@@ -355,6 +420,12 @@ for i = 1:length(riptData.starttime)
     y_vertices = [min(ydisp)-2-0.5*nrnCount,min(ydisp)-2-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.2, 'EdgeColor','none')
 end
+
+
+% Sum the gaussian traces from all neurons and zscore it.
+sumGtrace = sum(nrnsGtrace,2);
+zGtrace = zscore(sumGtrace);
+% plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zGtrace,  Color=[0.6 0.3 0]) % Brown
 
 % Calculate zscore of sum of envelope zscores of all tetrodes and plot.
 % Each tetrode's z-scored envelope measures, relatively, the power of the ripple band 
@@ -365,21 +436,29 @@ end
 sumzEnv = sum(riptetszEnvs,2);
 popzscore = zscore(sumzEnv); % Zscore of all tetrodes
 
-peakThr = 5; % Number of standard deviations above the mean to detect peak
+zCom = zscore(zGtrace+popzscore); % z-score the combined mulitunit and tetrode zscore traces.
+
+peakThr = 7; % Number of standard deviations above the mean to detect peak
 peakSep = 0;  % Minimum time (in ms) between peaks.
 peakWidth = 0; % Minimum width (in ms) that a peak must have.
-peakProm = 4; % Minimum height (in stds) above neighboring signal a peak must have.
+peakProm = 7; % Minimum height (in stds) above neighboring signal a peak must have.
 
 % Use the findpeaks function to find where the zscore passes above
 % threshold. Note that when the sample rate is provided, peak locations
 % and widths are returned in units of time.
-[heights,times,widths,proms] = findpeaks(popzscore,timeRange, MinPeakHeight=peakThr,...
+[heights,times,widths,proms] = findpeaks(zGtrace+popzscore,timeRange, MinPeakHeight=peakThr,...
     MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
+% [heights,times,widths,proms] = findpeaks(zCom,timeRange, MinPeakHeight=peakThr,...
+%     MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
 
-plot(times, heights, '.r',HandleVisibility="off")
-plot([min(timeRange),max(timeRange)],[peakThr,peakThr], '--b',HandleVisibility="off")
-plot([min(timeRange),max(timeRange)],[0,0], '--k',HandleVisibility="off")
-plot(timeRange, min(ydisp)+popzscore, 'k',HandleVisibility="off")
+plot(times, (min(ydisp)-4-0.5*nrnCount)+heights, '.r',HandleVisibility="off")
+plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount)+peakThr,(min(ydisp)-4-0.5*nrnCount)+peakThr], '--b',HandleVisibility="off")
+plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount),(min(ydisp)-4-0.5*nrnCount)], '--k',HandleVisibility="off")
+plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount)+1,(min(ydisp)-4-0.5*nrnCount)+1], '--r',HandleVisibility="off")
+% plot(timeRange, min(ydisp)+popzscore, 'k',HandleVisibility="off")
+plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zGtrace+popzscore, 'k',HandleVisibility="off")
+% plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zCom, 'k',HandleVisibility="off")
+plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+popzscore, Color=[1 0.4 0.3],HandleVisibility="off")
 
 title(sprintf("%s, Epoch %d | numpeaks=%d",rStr,e,length(heights)))
 ylabel("Voltage (mV)")
@@ -387,11 +466,6 @@ xlabel("Time (s)")
 legend(riptetsStr)
 
 
-
-% Sum the gaussian traces from all neurons and zscore it.
-sumGtrace = sum(nrnsGtrace,2);
-zGtrace = zscore(sumGtrace);
-plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zGtrace,  Color=[0.6 0.3 0]) % Brown
 
 
 
