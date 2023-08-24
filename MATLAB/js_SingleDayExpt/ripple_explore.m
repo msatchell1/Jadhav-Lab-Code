@@ -111,7 +111,7 @@ restEpochs = 1:2:17;
 
 
 
-%% Basic ripple analyses
+%% Exploratory ripple analyses
 
 % % Plot total ripple duration across epochs
 % ripDurs = zeros([size(C_allript,2), 17]);
@@ -175,8 +175,9 @@ restEpochs = 1:2:17;
 
 
 % Plot LFP, ripple times and spikes of ripple tetrodes and all spikes on
-% those tetrodes.
-rStr = "JS15"; % rat name
+% those tetrodes. Also plot riple detection algorithm and peak finding.
+
+rStr = "JS21"; % rat name
 r = find(contains(load_rats,rStr));
 eStr = "03"; % epoch number
 e = str2num(eStr);
@@ -211,20 +212,20 @@ e = str2num(eStr);
 % riptets = [12, 6,8,9,10,15,26];
 % ydisp = [7, 4,3,2,1,0,-1];
 
-% % For JS15
-riptetsStr = {'05','06','07','08','09','11','21','24','25'};
-riptets = [5,6,7,8,9,11,21,24,25];
-ydisp = [5,4,3,2,1,0,-1,-2,-3];
+% % % For JS15
+% riptetsStr = {'05','06','07','08','09','11','21','24','25'};
+% riptets = [5,6,7,8,9,11,21,24,25];
+% ydisp = [5,4,3,2,1,0,-1,-2,-3];
 
 % % For JS17
 % riptetsStr = {'06','05','24','22','11','12'};
 % riptets = [6,5,24, 22, 11,12];
 % ydisp = [6,5,4,1,-2,-3];
 
-% % For JS21
-% riptetsStr = {'05','06','25','07', '08'};
-% riptets = [5,6,25,7, 8];
-% ydisp = [6,5,4,3,0];
+% For JS21
+riptetsStr = {'05','06','25','07', '08'};
+riptets = [5,6,25,7, 8];
+ydisp = [6,5,4,3,0];
 
 % % For JS34
 % riptetsStr = {'06','07', '11','12', '22','24','25','09'};
@@ -241,8 +242,8 @@ ripple_labels = {};
 
 for rt = 1:length(riptets)
     % CHECK that rat number, epoch, and tetrode match the loaded file
-    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_NEW_direct/EEG/%seegref01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}))
-    eegripple = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_NEW_direct/EEG/%sripple01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}));
+    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%seegref01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}))
+    eegripple = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%sripple01-%s-%s.mat",rStr,rStr,eStr,riptetsStr{rt}));
 
     % See main_explore on why I am using eegref instead of eeg.
 
@@ -417,9 +418,18 @@ end
 riptData = C_allriptimes{1,r}{1,e};
 for i = 1:length(riptData.starttime)
     x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
-    y_vertices = [min(ydisp)-2-0.5*nrnCount,min(ydisp)-2-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
+    y_vertices = [min(ydisp)-4-0.5*nrnCount,min(ydisp)-4-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.2, 'EdgeColor','none')
 end
+
+% My new rippletime data
+riptData_new = S_rippletimes;
+for i = 1:length(riptData_new.starttime)
+    x_vertices = [riptData_new.starttime(i),riptData_new.endtime(i),riptData_new.endtime(i),riptData_new.starttime(i)];
+    y_vertices = [min(ydisp)-4-0.5*nrnCount,min(ydisp)-4-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
+    patch(x_vertices, y_vertices, [0.2 1 0],'FaceAlpha', 0.2, 'EdgeColor','none')
+end
+
 
 
 % Sum the gaussian traces from all neurons and zscore it.
@@ -434,9 +444,9 @@ zGtrace = zscore(sumGtrace);
 % power changes for the all tetrodes while maintaining the difference in
 % mean ripple power for each tetrode.
 sumzEnv = sum(riptetszEnvs,2);
-popzscore = zscore(sumzEnv); % Zscore of all tetrodes
+popEnvzscore = zscore(sumzEnv); % Zscore of all tetrodes
 
-zCom = zscore(zGtrace+popzscore); % z-score the combined mulitunit and tetrode zscore traces.
+zCum = zscore(zGtrace+popEnvzscore); % z-score the combined mulitunit and tetrode zscore traces.
 
 peakThr = 7; % Number of standard deviations above the mean to detect peak
 peakSep = 0;  % Minimum time (in ms) between peaks.
@@ -446,54 +456,28 @@ peakProm = 7; % Minimum height (in stds) above neighboring signal a peak must ha
 % Use the findpeaks function to find where the zscore passes above
 % threshold. Note that when the sample rate is provided, peak locations
 % and widths are returned in units of time.
-[heights,times,widths,proms] = findpeaks(zGtrace+popzscore,timeRange, MinPeakHeight=peakThr,...
+[pkHeights,pkTimes,pkWidths,pkProms] = findpeaks(zGtrace+popEnvzscore,timeRange, MinPeakHeight=peakThr,...
     MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
 % [heights,times,widths,proms] = findpeaks(zCom,timeRange, MinPeakHeight=peakThr,...
 %     MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
 
-plot(times, (min(ydisp)-4-0.5*nrnCount)+heights, '.r',HandleVisibility="off")
+plot(pkTimes, (min(ydisp)-4-0.5*nrnCount)+pkHeights, '.r',HandleVisibility="off")
 plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount)+peakThr,(min(ydisp)-4-0.5*nrnCount)+peakThr], '--b',HandleVisibility="off")
 plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount),(min(ydisp)-4-0.5*nrnCount)], '--k',HandleVisibility="off")
 plot([min(timeRange),max(timeRange)],[(min(ydisp)-4-0.5*nrnCount)+1,(min(ydisp)-4-0.5*nrnCount)+1], '--r',HandleVisibility="off")
-% plot(timeRange, min(ydisp)+popzscore, 'k',HandleVisibility="off")
-plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zGtrace+popzscore, 'k',HandleVisibility="off")
-% plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zCom, 'k',HandleVisibility="off")
-plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+popzscore, Color=[1 0.4 0.3],HandleVisibility="off")
+% plot(timeRange, min(ydisp)+popEnvzscore, 'k',HandleVisibility="off")
+plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zGtrace+popEnvzscore, 'k',HandleVisibility="off")
+% plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+zCum, 'k',HandleVisibility="off")
+% plot(timeRange, (min(ydisp)-4-0.5*nrnCount)+popEnvzscore, Color=[1 0.4 0.3],HandleVisibility="off") % pink
 
-title(sprintf("%s, Epoch %d | numpeaks=%d",rStr,e,length(heights)))
+title(sprintf("%s, Epoch %d | numOldRips=%d, numNewRips=%d",rStr,e,length(riptData.starttime),length(riptData_new.starttime)))
 ylabel("Voltage (mV)")
 xlabel("Time (s)")
-legend(riptetsStr)
 
 
 
 
-
-%% Create new rippletime files with improved SWR detection
-
-% First, I need to come up with a ripple detection algorithm. For doing
-% this, I think for now I will use the same riptets that Justin used for
-% determining his rippletimes.
-
-
-% A cell array that holds riptets in their plotting order for all rats.
-% NOTE: Assumed order of rats in 'load_rats' is: 
-% {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'}
-C_riptets = {
-{'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25','26','27','28','29','34','36', '31','32','33','35'},...
-{'26','25','24','23', '11','07','21','08','15','13', '14'},...
-{'09','10', '25','24','15','21','23','22'},...
-{'12','10','07','21','22','25'},...
-{'12','06','08','09','10','15','26'},...
-{'05','06','07','08','09','11','21','24','25'},...
-{'06','05','24','22','11','12'},...
-{'05','06','25','07', '08'},...
-{'06','07', '11','12', '22','24','25','09'},...
-};
-
-
-
-
+% % Plot voltage, envelope and zscores.
 % eStr = "03"; % epoch number
 % e = str2num(eStr);
 % rStr = "JS21"; % rat name
@@ -521,6 +505,34 @@ C_riptets = {
 % plot(timeRange, zscore(double(ripEnv)))
 
 
+
+
+
+
+
+%% Create new rippletime files with improved SWR detection
+
+% First, I need to come up with a ripple detection algorithm. For doing
+% this, I think for now I will use the same riptets that Justin used for
+% determining his rippletimes.
+
+
+% A cell array that holds riptets in their plotting order for all rats.
+% NOTE: Assumed order of rats in 'load_rats' is: 
+% {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'}
+% IF load_rats ORDER CHANGES, C_riptets MUST BE ADJUSTED TO MATCH.
+C_riptets = {
+{'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25','26','27','28','29','34','36', '31','32','33','35'},...
+{'26','25','24','23', '11','07','21','08','15','13', '14'},...
+{'09','10', '25','24','15','21','23','22'},...
+{'12','10','07','21','22','25'},...
+{'12','06','08','09','10','15','26'},...
+{'05','06','07','08','09','11','21','24','25'},...
+{'06','05','24','22','11','12'},...
+{'05','06','25','07', '08'},...
+{'06','07', '11','12', '22','24','25','09'},...
+};
+
 % I want to save a struct with similar fields to that of Justin's
 % rippletimes struct. However, I want to have multiple versions of ripple
 % detection, so I will store multiple structs in a cell array for every
@@ -539,11 +551,11 @@ methodNames = {"Justin"};
 % for r = 1:length(load_rats)
 % for e = 1:17
     
-
 eStr = "03"; % epoch number
 e = str2double(eStr);
 rStr = "JS21"; % rat name
 r = find(contains(load_rats,rStr));
+
 
 for rt = 1:size(C_riptets{1,r},2)
 
@@ -566,36 +578,183 @@ for rt = 1:size(C_riptets{1,r},2)
     % Zscore the envelope of the ripple filter to determine significant
     % ripples.
     zEnv = zscore(double(ripEnv));
-    zV = zscore(refV);
 
-    % Determine rippletimes for this tetrode
+    if rt == 1 % define matrix to hold envelope traces. Envelope data should be the same length for all tetrodes.
+        riptetszEnvs = zeros([size(zEnv,1), size(C_riptets{1,r},2)]);
+    end
 
-    peakThr = 3; % Number of standard deviations above the mean to detect peak
-    peakSep = 1;  % Minimum time (in ms) between peaks.
-    peakWidth = 1; % Minimum width (in ms) that a peak must have.
-    peakProm = 5; % Minimum height (in stds) above neighboring signal a peak must have.
-    
-    % Use the findpeaks function to find where the zscore passes above
-    % threshold. Note that when the sample rate is provided, peak locations
-    % and widths are returned in units of time.
-    [heights,times,widths,proms] = findpeaks(zEnv,timeRange, MinPeakHeight=peakThr,...
-        MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
-
-    % pkIdxs = find(ismember(timeRange,times)); % Indices in timeRange where peaks occur.
-
-    figure;
-    hold on
-    plot(timeRange, zV)
-    plot(timeRange, zEnv)
-    plot(times, heights, '.r')
-    plot([min(timeRange),max(timeRange)],[peakThr,peakThr], '--k')
-    title(sprintf("thr=%.1f sep=%.1f width=%.1f proms=%.1f",peakThr,peakSep,peakWidth,peakProm))
-
-
-
-    
+    riptetszEnvs(:,rt) = zEnv; % add envelope data
 
 end
+
+gwinDur = 100; % Duration of gaussian window in ms.
+gwinlen = (refData.samprate/1000)*gwinDur + 1; % window length in time steps.
+gwin = gausswin(gwinlen); 
+
+% Use neuron spike data only from CA1 neurons
+nrnTets = []; % Tetrodes to plot neurons from.
+% Sort out CA1 tetrodes from PFC ones.
+for tet = 1:size(C_alltetinfo{1,r}{1,e},2)
+    tetinfo = C_alltetinfo{1,r}{1,e}{1,tet};
+    if isfield(tetinfo,"area") && strcmp(tetinfo.area,"CA1")
+        nrnTets(end+1) = tet;
+    end
+end
+
+
+nrnCount = 0;
+nrnsGtrace = []; % Holds gaussian trace for all neurons.
+nrncolor = [0.8 0.8 0.8]; % grey
+for i = 1:length(nrnTets)
+    tet = nrnTets(i);
+    if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
+        nrns = [C_allspikes{1,r}{1,e}{1,tet}{:}]; % struct with rows of neurons.
+        if ~isempty(nrns)
+            meanRates = [nrns.meanrate]';
+            isI = meanRates > 7; % Inhibitory neurons.
+            nrns = nrns(~isI); % Remove inhibitory neurons from struct.
+
+            idx = find(C_riptets{1,r} == tet);
+
+            for j = 1:length(nrns)
+                nrn = nrns(j);
+                spikeTimes = nrn.data(:,1);
+
+                isSpike = ismembertol(timeRange,spikeTimes, 1/(2*refData.samprate), DataScale=1);
+                gtrace = conv(isSpike,gwin,"same");
+                cutgtrace = gtrace > 1; % where to cut off summed peaks
+                gtrace(cutgtrace) = 1; % reassign these values to 1.
+
+                nrnCount = nrnCount + 1;
+               
+                nrnsGtrace(:,nrnCount) = gtrace;  % add nrn gaussian trace to matrix
+            end
+        end
+    end
+end
+
+
+
+% % Get ripple time data
+% riptData = C_allriptimes{1,r}{1,e};
+% for i = 1:length(riptData.starttime)
+%     x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
+%     y_vertices = [min(ydisp)-2-0.5*nrnCount,min(ydisp)-2-0.5*nrnCount,max(ydisp)+2,max(ydisp)+2];
+%     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.2, 'EdgeColor','none')
+% end
+
+
+% Sum the gaussian traces from all neurons and zscore it.
+sumGtrace = sum(nrnsGtrace,2);
+zGtrace = zscore(sumGtrace);
+
+% Calculate zscore of sum of envelope zscores of all tetrodes and plot.
+sumzEnv = sum(riptetszEnvs,2);
+popEnvzscore = zscore(sumzEnv); % Zscore of all tetrodes
+
+cumEnvG = zGtrace+popEnvzscore; % The cumulative zscore of both the spike data gaussians and LFP envelope.
+% zCum = zscore(zGtrace+popEnvzscore); % z-score the combined mulitunit and tetrode zscore traces.
+
+peakThr = 7; % Number of standard deviations above the mean to detect peak
+peakSep = 0;  % Minimum time (in ms) between peaks.
+peakWidth = 0; % Minimum width (in ms) that a peak must have.
+peakProm = 7; % Minimum height (in stds) above neighboring signal a peak must have.
+
+% Use the findpeaks function to find where the zscore passes above
+% threshold. Note that when the sample rate is provided, peak locations
+% and widths are returned in units of time.
+[pkHeights,pkTimes,pkWidths,pkProms] = findpeaks(cumEnvG,timeRange, MinPeakHeight=peakThr,...
+    MinPeakDistance=peakSep/1000, MinPeakWidth=peakWidth/1000, MinPeakProminence=peakProm);
+
+
+% Now that the peaks have been found, it is time to determine the window
+% edges for rippletimes. To do this, the times at which cumEnvG crosses below 0 will
+% define the edges of the window for each peak. If multiple peaks occur
+% within the same window, only one rippletime window will be recorded. The
+% peak data should be saved separately.
+
+% Indices where cumulative zscore < 0.
+isltz = cumEnvG < 0;
+% If the zscore dips down very briefly below zero then comes back up I may
+% still want to include the whole thing as a single ripple, so a minimum
+% dip size is used to remove groups of indices in isltz below that
+% size.
+minDipDur = 5; % Minimum time (ms) required for zscore to be below 0 to exit ripple window.
+minDipLen = ceil((refData.samprate/1000)*minDipDur);
+
+% I need to group the indicies in ltzInds, but without being able to use
+% bwlabel (which I need image processing toolbox for, and can't install for
+% some reason), all the group sorting only sorts by value. So I need to
+% assign a different value to each group. For now I will do this with a for
+% loop...
+ltzLabel = -1;
+gtzLabel = 2;
+groupLabels = zeros(size(isltz));
+for i = 1:length(isltz)-1
+    if isltz(i) == 0 % if zscore greater than zero
+        groupLabels(i) = gtzLabel;
+        if isltz(i+1) == 1
+            gtzLabel = gtzLabel + 1;
+        end
+    elseif isltz(i) == 1 % if zscore less than zero
+        groupLabels(i) = ltzLabel;
+        if isltz(i+1) == 0
+            ltzLabel = ltzLabel - 1;
+        end
+    end
+end
+
+% gcounts counts the number of time steps in each group and keeps the label
+% associated with those groups in gIDs.
+[gcounts, gIDs] = groupcounts(groupLabels);
+% Converts groups that are too small to be as if they are greater than zero
+% (i.e., assigned to value 0 in isltz).
+for g = 1:length(gcounts)
+    if gcounts(g) < minDipLen
+        isltz(groupLabels == gIDs(g)) = 0;
+    end
+end
+
+starttimes = zeros(size(pkTimes));
+endtimes = zeros(size(pkTimes));
+% Now the edge determination can happen.
+for p = 1:length(pkTimes)
+    pkt = pkTimes(p); % time in seconds of peak
+    pkidx = find(timeRange == pkt); % index in timeRange of peak
+    isltpk_isltz = timeRange < pkt & isltz == 1; % times less than peak time and with zscore less than zero.
+    isgtpk_isltz = timeRange > pkt & isltz == 1; % times greater than peak time and with zscore less than zero.
+    starttimeidx = find(isltpk_isltz,1,"last");
+    endtimeidx = find(isgtpk_isltz,1,"first");
+    % Actually record start and end times around the peak.
+    starttimes(p) = timeRange(starttimeidx);
+    endtimes(p) = timeRange(endtimeidx);
+end
+
+% Remove duplicate times for ripples with multiple peaks.
+starttimes = unique(starttimes,"stable");
+endtimes = unique(endtimes,"stable");
+
+% make isRippleTime vector
+isRippleTime = zeros(size(timeRange));
+for t = 1:size(starttimes,1)
+    isRippleTime(timeRange >= starttimes(t) & timeRange <= endtimes(t)) = 1; % For a single ripple
+end
+
+
+
+% S_rippletimes.methodName
+S_rippletimes.starttime = starttimes;
+S_rippletimes.endtime = endtimes;
+S_rippletimes.isRippleTime = isRippleTime;
+S_rippletimes.total_duration = sum(endtimes-starttimes); % In seconds
+S_rippletimes.peakHeights = pkHeights;
+S_rippletimes.peakTimes = pkTimes;
+S_rippletimes.peakWidths = pkWidths;
+S_rippletimes.peakProms = pkProms;
+S_rippletimes.peakThr = peakThr;
+S_rippletimes.peakProm = peakProm;
+S_rippletimes.gaussWindowDur = gwinDur; % in ms
+
 
 
 
