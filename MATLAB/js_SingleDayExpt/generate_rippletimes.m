@@ -143,7 +143,7 @@ C_riptets = {
 % methodNames = {"Justin"};
 
 % C_allripmeth = cell(1,length(load_rats));
-rStr = "JS34"; % rat name
+rStr = "ER1_NEW"; % rat name
 r = find(contains(load_rats,rStr));
 % for r = 1:length(load_rats)
     % rStr = load_rats{r};

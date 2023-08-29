@@ -5,7 +5,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % tetrodes for each rat.
 
 % All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
-load_rats = {'KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+load_rats = {'ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','rippletimes_MES.
 filetypes = {'linfields01','cellinfo','spikes01','pos01','sws01','rem01','rippletimes_MES'};
@@ -142,7 +142,15 @@ for r = 1:size(C_allspikes,2)
         for tet = 1:size(C_allspikes{1,r}{1,e},2)
             if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
                 for nrn = 1:size(C_allinfo{1,r}{1,e}{1,tet},2)
-                    if ~isempty(C_allspikes{1,r}{1,e}{1,tet}{1,nrn})
+                    if ~isempty(C_allspikes{1,r}{1,e}{1,tet}{1,nrn}) 
+                        % --------------------
+                        % The problem here is happening because the new
+                        % spikes data Justin shared with me doesn't have
+                        % empty arrays where the old one used to have empty
+                        % spots for cells that would exist in future
+                        % epochs. SO I think I need to go in and add these
+                        % empty arrays to the ER1spikes01 file...
+                        % --------------------
 
                         % If the neuron exists in the spike file it should
                         % exist in the cellinfo file.
