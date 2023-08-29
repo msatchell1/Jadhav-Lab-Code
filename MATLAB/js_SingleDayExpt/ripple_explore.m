@@ -1,5 +1,10 @@
 % This script will dive a bit into ripples of both behavioral and rest
 % epochs. 
+% Note: Sometimes in this script I mistakenly say "multiunit activity" when I
+% actually only mean cell activity. Multiunit activity refers to all the
+% spikes detected on a tetrode, clustered to a cell or not, and is
+% sometimes used for ripple detection. I am not doing this, and instead
+% only using spikes from clustered cells.
 % Michael Satchell
 
 %% Load data
@@ -11,10 +16,10 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % tetrodes for each rat.
 
 % All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
-load_rats = {'KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
-filetypes = {'rippletime','spikes01','tetinfo','pos01'};
+filetypes = {'rippletime01','spikes01','tetinfo','pos01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -191,11 +196,11 @@ e = str2num(eStr);
 %     26,27,28,29,34,36, 31,32,33,35];
 % ydisp = [15:-1:8,  5:-1:3, 0:-1:-10 -13:-1:-16];
 
-% For ER1_NEW
-% riptetsStr must be double-digit (i.e. must be '02', not '2').
-riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
-riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
-ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8]; % y-displacements. Groupings of LFPs for clear plotting.
+% % For ER1_NEW
+% % riptetsStr must be double-digit (i.e. must be '02', not '2').
+% riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
+% riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
+% ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8]; % y-displacements. Groupings of LFPs for clear plotting.
 
 % % For KL8
 % riptetsStr = {'09','10', '25','24','15','21','23','22'}; 
@@ -534,8 +539,8 @@ xlabel("Time (s)")
 % {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'}
 % IF load_rats ORDER CHANGES, C_riptets MUST BE ADJUSTED TO MATCH.
 C_riptets = {
-% {'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25','26','27','28','29','34','36', '31','32','33','35'},...
-% {'26','25','24','23', '11','07','21','08','15','13', '14'},...
+{'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25','26','27','28','29','34','36', '31','32','33','35'},...
+{'26','25','24','23', '11','07','21','08','15','13', '14'},...
 {'09','10', '25','24','15','21','23','22'},...
 {'12','10','07','21','22','25'},...
 {'12','06','08','09','10','15','26'},...
@@ -545,26 +550,26 @@ C_riptets = {
 {'06','07', '11','12', '22','24','25','09'},...
 };
 
-% I want to save a struct with similar fields to that of Justin's
-% rippletimes struct. However, I want to have multiple versions of ripple
-% detection, so I will store multiple structs in a cell array for every
-% epoch in rippletimes. The first one will be Justin's rippletime data,
-% followed by my own ripple detection algorithm results. This will then be
-% saved to the animal's file, just like Justin's rippletimes. Then, when I load the cell
-% array I will have access to any of the different ripple detection
-% algorithms I applied. Each struct will have fields indicating the parameters
-% or methods used for detection (1/0 for each field might be best).
-% ripMethods will be the cell array.
-ripMethods = {};
+% % I want to save a struct with similar fields to that of Justin's
+% % rippletimes struct. However, I want to have multiple versions of ripple
+% % detection, so I will store multiple structs in a cell array for every
+% % epoch in rippletimes. The first one will be Justin's rippletime data,
+% % followed by my own ripple detection algorithm results. This will then be
+% % saved to the animal's file, just like Justin's rippletimes. Then, when I load the cell
+% % array I will have access to any of the different ripple detection
+% % algorithms I applied. Each struct will have fields indicating the parameters
+% % or methods used for detection (1/0 for each field might be best).
+% % ripMethods will be the cell array.
+% ripMethods = {};
+% 
+% % Ripple detection method names.
+% methodNames = {"Justin"};
 
-% Ripple detection method names.
-methodNames = {"Justin"};
-
-C_allripmeth = cell(1,length(load_rats));
-% rStr = "KL8"; % rat name
-% r = find(contains(load_rats,rStr));
-for r = 1:length(load_rats)
-    rStr = load_rats{r};
+% C_allripmeth = cell(1,length(load_rats));
+rStr = "BG1"; % rat name
+r = find(contains(load_rats,rStr));
+% for r = 1:length(load_rats)
+    % rStr = load_rats{r};
     short_name = load_rats{r};
     chop_idx = strfind(load_rats{r},'_') - 1;
     if ~isempty(chop_idx)
@@ -572,7 +577,7 @@ for r = 1:length(load_rats)
         % So far this is only needed for ER1_NEW to remove the '_NEW'.
     end
     
-    riptimesEpochs = cell(1,17); % To hold rippletime structures for each epoch.
+    rippletimes = cell(1,17); % To hold rippletime structures for each epoch.
     for e = 1:17
     
         if e < 10 
@@ -785,24 +790,31 @@ for r = 1:length(load_rats)
         S_rippletimes.minDipDur = minDipDur; % in ms
     
         % Store for each epoch
-        riptimesEpochs{1,e} = S_rippletimes;
+        rippletimes{1,e} = S_rippletimes;
     end
-    C_allripmeth{1,r} = riptimesEpochs;
-end
+    % C_allripmeth{1,r} = riptimesEpochs;
+    % To get rippletimes into the same format as Justin's rippletime
+    % file, it must be embeded in an outer 1x1 cell array.
+    rippletimes_MES = {};
+    rippletimes_MES{1,1} = rippletimes;
+    save(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/%srippletimes_MES.mat",rStr,short_name),"rippletimes_MES")
+% end
 
 
-    % for m = 1:length(methodNames)
-    %     method = methodNames{m};
-    % 
-    %     if strcmp(method, "Justin")
-    % 
-    % 
-    % 
-    % 
-    % 
-    % 
-    % 
-    % 
-    % 
-    %     end
-    % end
+
+
+% for m = 1:length(methodNames)
+%     method = methodNames{m};
+% 
+%     if strcmp(method, "Justin")
+%   
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+% 
+%     end
+% end
