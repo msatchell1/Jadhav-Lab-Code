@@ -157,7 +157,16 @@ for r = 1:size(C_allspikes,2)
 
     % Save data from each rat to overwrite original file.
     spikes = C_allspikes(1,r);
-    % save(string(fullfile(File_dir(f).folder, File_dir(f).name)), "spikes");
+
+    short_name = load_rats{r};
+    chop_idx = strfind(load_rats{r},'_') - 1;
+    if ~isempty(chop_idx)
+        short_name = load_rats{r}(1:chop_idx); % Gets the first characters of the rat's name before an '_'.
+        % So far this is only needed for ER1_NEW to remove the '_NEW'.
+    end
+
+    save(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/%sspikes01.mat",load_rats{r},short_name),"spikes")
+    fprintf("Saved file: %sspikes01",short_name)
 
 
 end

@@ -139,81 +139,6 @@ C_allstates = [C_allstates; C_runstate; C_stillstate];
 % end
 
 
-% Add 'area' field to the spike data for later sorting. Also add place
-% field data such as mean and std FR, sparsity, and spatial coverage for each trajectory.
-% linfields must be loaded to add the placefield data.
-for r = 1:size(C_allspikes,2)
-    for e = 1:size(C_allspikes{1,r},2)
-        for tet = 1:size(C_allspikes{1,r}{1,e},2)
-            if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
-                for nrn = 1:size(C_allinfo{1,r}{1,e}{1,tet},2)
-                    if ~isempty(C_allspikes{1,r}{1,e}{1,tet}{1,nrn}) 
-
-                        % If the neuron exists in the spike file it should
-                        % exist in the cellinfo file.
-                        nrnCellinfo = C_allinfo{1,r}{1,e}{1,tet}{1,nrn};
-                        
-
-                        if isfield(nrnCellinfo,'area')
-                            C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.area = nrnCellinfo.area; % Create field in spike struct.       
-                        end
-                        
-                        % Linfields data is only available for behavioral
-                        % epochs (even). Existence of neurons does not
-                        % quite match that of C_allspikes.
-                        if size(C_alllinf{1,r},2) >= e && ~isempty(C_alllinf{1,r}{1,e})
-                            if ~isempty(C_alllinf{1,r}{1,e}{1,tet}) && size(C_alllinf{1,r}{1,e}{1,tet},2) >= nrn
-                                if ~isempty(C_alllinf{1,r}{1,e}{1,tet}{1,nrn})
-                                    trajsLinf = C_alllinf{1,r}{1,e}{1,tet}{1,nrn}; % Trajectories for a single neuron.
-                                    for tr = 1:size(trajsLinf,2)
-        
-                                        trData = trajsLinf{tr};
-                                        binRate = trData(:,7)./trData(:,6); % Firing rate normalized by occupancy
-                                        FRmean = mean(binRate,1,'omitnan');
-                                        FRstd = std(binRate,1,'omitnan');
-        
-                                        % calc sparsity
-                                        totOcc = sum(trData(:,6),1); % Total time spent on track
-                                        probOcc = trData(:,6)./totOcc; % Probability of occupying each spot on the trajectory
-                                        sum1 = sum(probOcc.*binRate);
-                                        sum2 = sum(probOcc.*(binRate.^2));
-                                        sparsity = (sum1^2)/sum2;
-        
-                                        % calc spatial coverage
-                                        numBins = size(trData,1); % number of spatial bins this trajectory is split into.
-                                        peakRate = max(binRate);
-                                        isAboveThr = binRate > 0.25*peakRate;
-                                        coverage = sum(isAboveThr)/numBins; % Fraction of spatial bins with at least 25%
-                                        % of the peak firing rate on that trajectory.
-
-                                        
-        
-                                        % Assign to fields in struct
-                                        C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.traj_FRmeans(tr) = FRmean;
-                                        C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.traj_FRstds(tr) = FRstd;
-                                        C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.traj_sparsity(tr) = sparsity;
-                                        C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.traj_coverage(tr) = coverage;
-                                        C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.traj_FRpeaks(tr) = peakRate;
-        
-                                    end
-                                    spStruct = C_allspikes{1,r}{1,e}{1,tet}{1,nrn};
-                                    isPC = is_placecell(spStruct.traj_FRmeans, spStruct.traj_FRstds, spStruct.traj_FRpeaks,...
-                                        spStruct.traj_sparsity, spStruct.traj_coverage);
-                                    C_allspikes{1,r}{1,e}{1,tet}{1,nrn}.isPlaceCell = isPC;
-
-                                end
-                            end
-                        end
-
-                    end
-                end
-            end
-        end
-    end
-end
-
-
-
 
 % ------------------------------------------------------------------
 
@@ -227,7 +152,6 @@ FR_byEpoch = cell(1,length(brainAreas));
 % Matrix to indicate how many trajectories qualify for place fields during that epoch, organized in the same format
 % as FR_byEpoch. Each element of matrix contains an integer between 0 and 4.
 PCsum_byEpoch = cell(1,length(brainAreas));
-
 
 % Calculate and store mean firing rate across the entire epoch for each
 % epoch, rat, and brain area. Same for isPC.
@@ -270,7 +194,6 @@ for r = 1:length(C_allspikes)
     end
 end
 
-
 % Separating into rest and behavior epoch data.
 behEpochs = 2:2:size(FR_byEpoch{1},2);
 restEpochs = 1:2:size(FR_byEpoch{1},2);
@@ -296,108 +219,9 @@ for a = 1:length(brainAreas)
     end
 end
 
+% Calculates firing rates, state occurance times, and state durations
+[FR_allStates,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,C_allstates,C_allspikes);
 
-% Gets epochs that have data for all states. For most states this should be all odd
-% epochs for the data I am sorting here, because all the states
-% happen during the rest epochs except for rippletimes. I will detect non-empty
-% epochs for generality. Note this assumes all rats have the same number of
-% epochs as rat 1, which should be true when clip_17_epochs.m has been
-% used on C_allstates.
-nonemptyEpochs = zeros(size(C_allstates,1),length(C_allstates{1,1}));
-for s2 = 1:size(C_allstates,1)
-    nonemptyEpochs(s2,:) = ~cellfun(@isempty, C_allstates{s2,1});
-end
-
-
-
-% To hold firing rates for all states held in C_allstates
-FR_allStates = cell(size(C_allstates,1),length(brainAreas));
-% Time duration of states by epoch. (num states) x  (num rats) x (num epochs).
-Dur_allStates = zeros(size(C_allstates,1),size(C_allstates,2),size(nonemptyEpochs,2));
-Dur_ratRef = zeros(size(C_allstates,1),size(C_allstates,2),size(nonemptyEpochs,2)); % Array to reference rat number
-% All the start and end times of all occurances. (num states) x (num rats).
-% Then within each cell are cells for each epoch, and within those is a
-% (num occurances) x 2 matrix. Col 1 is starttimes, col 2 endtimes.
-Occ_allStates = cell(size(C_allstates,1),size(C_allstates,2));
-
-% Main loop to calculate mean firing rate for all states in all brain areas.
-for a = 1:length(brainAreas)
-
-    for s2 = 1:size(C_allstates,1)
-    
-        % Gets epochs that have data for this state. This should be identical across rats.
-        nonempty = zeros(1,length(C_allstates{1,1}));
-    
-        for r = 1:size(C_allstates,2) 
-            % Indicates which epochs contain data
-            nonempty(1,:) = ~cellfun(@isempty, C_allstates{s2,r});
-            % To hold mean firing rate data across all epochs for a single rat.
-            ratMeans = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
-            % To hold state occurances for all epochs.
-            occEpochs = cell(1,length(C_allstates{s2,r}));
-    
-            for e = 1:length(C_allstates{s2,r})
-                
-                if nonempty(1,e) == 1
-                    % Now the real deal. For every non-empty epoch, each state type (rem, rippletime,
-                    % sleep, sws, and waking) will loop through the times
-                    % that that state occurs, counting the number of spikes
-                    % that occur during the duration of that occurance. In the end
-                    % these spike counts will be summed up and divided by the
-                    % total duration of that state to get the mean rate.
-                    
-                    epochData = C_allstates{s2,r}{1,e}; % Data on a single rat, state, and epoch.
-                    nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets.
-                    STs_inState = cell(1,length(nrnsAlltets)); % Cell of spike times that occur within the given state.
-                    % Columns are neurons.
-        
-                    for o = 1:size(epochData.starttime,1) % Loop through occurances of that state.
-        
-                        for nrn = 1:length(nrnsAlltets)
-        
-                            % isfield returns false if the struct does not exist
-                            if isfield(nrnsAlltets{nrn},'data') && ~isempty(nrnsAlltets{nrn}.data)...
-                                    && strcmp(nrnsAlltets{nrn}.area, brainAreas{a})
-                
-                                STs = nrnsAlltets{nrn}.data(:,1); % Time of all spikes for that nrn.
-        
-                                % Logical 1s and 0s determining if spikes fall within the state occurance window.
-                                inOcc = (epochData.starttime(o) <= STs) & (STs <= epochData.endtime(o));
-                                % Appends data from occurance to the state.
-                                STs_inState{1,nrn} = [STs_inState{1,nrn}; STs(inOcc)];
-            
-                            end
-                        end
-                    end
-                        
-                    % Now that spikes have been collected for each nrn for all
-                    % occurances of the state, the mean rates for that state are calculated.
-                    % This means dividing the number of spikes by the total
-                    % duration of the state.
-                    occTimes = [epochData.starttime, epochData.endtime];
-                    occDurs = epochData.endtime - epochData.starttime;
-                    stateDur = sum(occDurs);  % Total time spent in state.
-                    Dur_allStates(s2,r,e) = stateDur;
-                    Dur_ratRef(s2,r,e) = r;
-                    FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
-                    for nrn = 1:size(STs_inState,2)
-                        if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
-                            meanFR = length(STs_inState{1,nrn})/stateDur; % Calculate mean firing rate
-                            FRmeans(1,nrn) =  meanFR;
-                        end
-                    end
-                     
-                    ratMeans(:,e) = FRmeans; % Stores all FR means for that epoch.
-                    occEpochs{1,e} = occTimes;
-               
-                end
-            end
-
-            FR_allStates{s2,a} = [FR_allStates{s2,a}; ratMeans];    
-            Occ_allStates{s2,r} = occEpochs;
-        end
-    end
-end
 
 
 
