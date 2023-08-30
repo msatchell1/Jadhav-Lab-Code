@@ -16,10 +16,10 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % tetrodes for each rat.
 
 % All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
-load_rats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+load_rats = {'ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
-filetypes = {'rippletime01','spikes01','tetinfo','pos01'};
+filetypes = {'rippletimes_MES','spikes01','tetinfo','pos01'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -524,3 +524,7 @@ xlabel("Time (s)")
 
 
 
+
+
+
+%% Plot ripple rate, duration, and cell firing rates

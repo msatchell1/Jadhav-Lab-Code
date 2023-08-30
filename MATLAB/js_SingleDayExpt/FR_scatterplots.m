@@ -1,3 +1,8 @@
+% Script to plot the average firing rates of neurons against each other
+% across different behavioral and sleep states, as well as color coding for
+% spatial coverage and peak FR for place cells.
+
+
 clearvars;
 
 data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
@@ -143,14 +148,6 @@ for r = 1:size(C_allspikes,2)
             if ~isempty(C_allspikes{1,r}{1,e}{1,tet})
                 for nrn = 1:size(C_allinfo{1,r}{1,e}{1,tet},2)
                     if ~isempty(C_allspikes{1,r}{1,e}{1,tet}{1,nrn}) 
-                        % --------------------
-                        % The problem here is happening because the new
-                        % spikes data Justin shared with me doesn't have
-                        % empty arrays where the old one used to have empty
-                        % spots for cells that would exist in future
-                        % epochs. SO I think I need to go in and add these
-                        % empty arrays to the ER1spikes01 file...
-                        % --------------------
 
                         % If the neuron exists in the spike file it should
                         % exist in the cellinfo file.

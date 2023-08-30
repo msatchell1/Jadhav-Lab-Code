@@ -55,9 +55,16 @@ end
 
 %% Edit timerange values
 
-for f = 1:size(allData,1)
+% The spikes file Justin sent me is also missing empty arrays to pad the
+% ends of the cell array for tetrodes in epoch 2. I need the total number
+% of cells, empty or not, to be the same across all epochs for my
+% FR_scatterplots code, so I am going to pad epoch 2 with empty cells here
+% as well.
+
+
+for f = 1:size(allData,1) % doesn't loop anything
     for e = 1:size(allData{f,1},2)
-        tets = allData{f,1}{1,e};
+        tets = allData{f,1}{1,e}; % Cell array of all tetrodes for that epoch.
         for t = 1:size(tets,2)
             if ~isempty(tets{1,t})
                 for n = 1:size(tets(t),2) % Loops through all neurons on a tetrode
@@ -73,6 +80,15 @@ for f = 1:size(allData,1)
                     end
                 end
             end
+            % This assumes that the first epoch has the correct number of
+            % empty+full cells.
+            celldiff = length(allData{1,1}{1,1}{1,t}) - length(tets{1,t});
+            if celldiff > 0
+                for d = 1:celldiff
+                    allData{f,1}{1,e}{1,t}{end+1} = [];
+                end
+            end
+
         end
     end
 end
