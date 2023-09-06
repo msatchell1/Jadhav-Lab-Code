@@ -531,3 +531,11 @@ brainAreas = {'CA1','PFC'};
 %% Plot ripple rate, duration, and cell firing rates
 
 
+% Extract ripple data
+allRipRates = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2));
+for r = 1:size(C_allriptimes,2)
+    
+end
+
+
+
