@@ -575,19 +575,12 @@ for r = 1:size(C_allriptimes,2)
 
 end
 
-
+% [X,Y] = meshgrid(1:17,1:size(C_alldata,2));
 figure
 hold on
-for r = 1:size(C_alldata,2)
-    plot(behEpochs, allRipRates(r,behEpochs), ".", Color='b', HandleVisibility="off")
-    plot(restEpochs, allRipRates(r,restEpochs), ".", Color='r', HandleVisibility="off")
-end
-plot(behEpochs, mean(allRipRates(:,behEpochs),1), Color='b',DisplayName="beh")
-plot(restEpochs, mean(allRipRates(:,restEpochs),1), Color='r',DisplayName="rest")
-title("Ripple Rates across Epochs")
-ylabel("Ripple Rate (ripples/sec)")
-xlabel("Epoch")
+for r = 1:size(C)
+scatter(1:17, allRipRates, ".", Color='b', DisplayName="rip rate")
+scatter(1:17, allRipnDur, ".", Color="r", DisplayName="norm rip dur")
 legend()
 
 
-% scatter(1:17, allRipnDur(r,:), ".", MarkerFaceColor="r", DisplayName="norm rip dur")
