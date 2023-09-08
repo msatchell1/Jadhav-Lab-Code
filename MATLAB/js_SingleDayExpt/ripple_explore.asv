@@ -19,7 +19,7 @@ data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 load_rats = {'ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
-filetypes = {'spikes01','tetinfo','pos01','sws01','rem01','rippletimes_MES'};
+filetypes = {'spikes01','tetinfo','pos01','sws01','rem01','rippletimes_MES','behavperform'};
 
 C_alldata = {}; % Cell array to hold data for all rats. If multiple filetypes 
 % are loaded, each row holds a different file type, ordered in the same
@@ -113,6 +113,11 @@ if isempty(ti_idx)
     error("tetinfo data must be loaded to run this analysis.")
 end
 
+behper_idx = find(contains(filetypes,'behavperform'));
+if isempty(behper_idx)
+    error("behavperform data must be loaded to run this analysis.")
+end
+
 C_swsstate = C_alldata(sws_idx,:);
 C_remstate = C_alldata(rem_idx,:);
 C_allspikes = C_alldata(spikes_idx,:);
@@ -124,6 +129,7 @@ C_stillstate = create_stillstate(C_alldata(pos_idx,:));
 C_allstates = [C_allstates; C_runstate; C_stillstate];
 C_allriptimes = C_alldata(rt_idx,:);
 C_alltetinfo = C_alldata(ti_idx,:);
+C_allbehper = C_alldata(behper_idx,:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -158,13 +164,17 @@ brainAreas = {'CA1','PFC'};
 % xlabel("Total Duration (s)")
 
 
-% % Plot LFP with ripple times in one rat/epoch
-% r = 2; % rat number
-% eStr = "03"; % epoch number
-% riptetsStr = {'26','25','24','23', '11','07','21','08','15','13', '14'}; % tetrode to take LFP from, ideally displays most of the ripples
+
+
+% % Plot LFP with ripple times in one rat/epoch. Also include SWS, still
+% % and run times.
+% r = 8; % rat number
+% eStr = "01"; % epoch number
 % e = str2num(eStr);
-% riptets = [26,25,24,23, 11,7,21,8,15,13, 14]; % ENSURE this matches riptetsStr
-% ydisp = [6,5,4,3, 0,-1,-2,-3,-4,-5, -8]; % Groupings of LFPs for clear plotting.
+% riptetsStr = {'06','07', '11','12', '22','24','25','09'};
+% riptets = [6,7, 11,12, 22,24,25,9];
+% ydisp = [8,7,4,3,0,-1,-2,-3];
+% 
 % 
 % figure;
 % hold on;
@@ -172,7 +182,7 @@ brainAreas = {'CA1','PFC'};
 % 
 % for rt = 1:length(riptets)
 %     % CHECK that rat number, epoch, and tetrode match the loaded file
-%     load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/ER1_NEW_direct/EEG/ER1eegref01-%s-%s.mat",eStr,riptetsStr{rt}))
+%     load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/JS34_direct/EEG/JS34eegref01-%s-%s.mat",eStr,riptetsStr{rt}))
 % 
 %     % See main_explore on why I am using eegref instead of eeg.
 % 
@@ -186,16 +196,78 @@ brainAreas = {'CA1','PFC'};
 % end
 % 
 % % Get ripple time data
-% riptData = C_allript{1,r}{1,e};
+% riptData = C_allriptimes{1,r}{1,e};
 % for i = 1:length(riptData.starttime)
 %     x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
 %     y_vertices = [min(refV+ydisp(rt)),min(refV+ydisp(rt)),max(refV),max(refV)];
 %     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.6, 'EdgeColor','none')
 % end
+% 
+% 
+% % I need to plot velocity with the times I have designated as "run" to check that 
+% % what I did worked.
+% posData = C_alldata(find(contains(filetypes,'pos01')),:); % Grabs position file data.
+% swsData = C_allstates(find(contains(stateNames,'sws')),:);
+% stillData = C_allstates(find(contains(stateNames,'still')),:);
+% runData = C_allstates(find(contains(stateNames,'run')),:);
+% posStruct = posData{1,r}{1,e};
+% swsStruct = swsData{1,r}{1,e};
+% stillStruct = stillData{1,r}{1,e};
+% runStruct = runData{1,r}{1,e};
+% vel = posStruct.data(:,5);
+% vel_sm = sgolayfilt(vel, 2, 31); % Smoothing the data.
+% 
+% % Plot velocity
+% plot(posStruct.data(:,1), vel_sm)
+% 
+% % Plot sws times
+% swsLabels = {};
+% for i = 1:length(swsStruct.starttime)
+%     x_vertices = [swsStruct.starttime(i),swsStruct.endtime(i),swsStruct.endtime(i),swsStruct.starttime(i)];
+%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+%     patch(x_vertices, y_vertices, [0 0.4470 0.7410],'FaceAlpha', 0.3, 'EdgeColor','none') % blue
+% 
+%     if i == 1
+%         swsLabels{i} = "sws times";
+%     else
+%         swsLabels{i} = "";
+%     end
+% end
+% 
+% % Plot still times
+% stillLabels = {};
+% for i = 1:length(stillStruct.starttime)
+%     x_vertices = [stillStruct.starttime(i),stillStruct.endtime(i),stillStruct.endtime(i),stillStruct.starttime(i)];
+%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+%     patch(x_vertices, y_vertices, [0 0.9 1],'FaceAlpha', 0.3, 'EdgeColor','none') % light blue
+% 
+%     if i == 1
+%         stillLabels{i} = "still times";
+%     else
+%         stillLabels{i} = "";
+%     end
+% end
+% 
+% % Plot run times
+% runLabels = {};
+% for i = 1:length(runStruct.starttime)
+%     x_vertices = [runStruct.starttime(i),runStruct.endtime(i),runStruct.endtime(i),runStruct.starttime(i)];
+%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+%     patch(x_vertices, y_vertices, [0.6 0.9 0],'FaceAlpha', 0.3, 'EdgeColor','none') % light green
+% 
+%     if i == 1
+%         runLabels{i} = "run times";
+%     else
+%         runLabels{i} = "";
+%     end
+% end
+% 
 % title(sprintf("Rat %d, Epoch %d",r,e))
-% ylabel("Voltage (mV)")
+% % ylabel("Voltage (mV)")
 % xlabel("Time (s)")
-% legend(riptetsStr)
+% % legend(riptetsStr,swsLabels{:})
+
+
 
 
 % % Plot LFP, ripple times and spikes of ripple tetrodes and all spikes on
@@ -511,6 +583,8 @@ brainAreas = {'CA1','PFC'};
 % xlabel("Time (s)")
 
 
+
+
 % % Plot voltage, envelope and zscores.
 % eStr = "03"; % epoch number
 % e = str2num(eStr);
@@ -546,41 +620,114 @@ brainAreas = {'CA1','PFC'};
 
 
 allRipRates = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Ripple rates
-allRipnDur = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Ripple durations normalized by the 
+allRipTotTime = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Total ripple time normalized by the 
 % length of SWS or still state time.
+allRipAvgDur = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % average ripple duration
 
 for r = 1:size(C_allriptimes,2)
     % We want to calculate ripple rate as the number of ripples divided by
-    % the total time available for ripples to occur, which in sleep is SWS
-    % and in wake are still states.
+    % the total time available for ripples to occur, i.e. SWS and still
+    % states.
     swsStates = C_swsstate{1,r};
     stillStates = C_stillstate{1,r};
 
     for e = 1:17
         
+        S_swsstate = swsStates{1,e}; % struct containing SWS info for one epoch
+        S_stillstate = stillStates{1,e};
         if mod(e,2) == 1 % Sleep epochs
-            S_swsstate = swsStates{1,e}; % struct containing SWS info for one epoch
-            stateDur = S_swsstate.total_duration;
-        else % Beh epochs
-            S_stillstate = stillStates{1,e};
-            stateDur = sum(S_stillstate.endtime - S_stillstate.starttime);
+            swsStillDur = S_swsstate.total_duration + sum(S_stillstate.endtime - S_stillstate.starttime);
+        else % beh epochs
+            swsStillDur = sum(S_stillstate.endtime - S_stillstate.starttime);
         end
+
         S_riptimes = C_allriptimes{1,r}{1,e};
 
         numRips = size(S_riptimes.starttime,1); % Number of independent ripple events
-        allRipRates(r,e) = numRips/stateDur;
+        allRipRates(r,e) = numRips/swsStillDur;
 
-        allRipnDur(r,e) = S_riptimes.total_duration/stateDur;
+        allRipTotTime(r,e) = S_riptimes.total_duration/swsStillDur;
+
+        allRipAvgDur(r,e) = S_riptimes.total_duration/numRips;
     end
 
 end
 
-% [X,Y] = meshgrid(1:17,1:size(C_alldata,2));
+
+% % Plot average ripple rate, total ripple time, and ripple durations (with data points)
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     plot(behEpochs, allRipRates(r,behEpochs), ".", Color='b', HandleVisibility="off")
+%     plot(restEpochs, allRipRates(r,restEpochs), ".", Color='r', HandleVisibility="off")
+% end
+% plot(behEpochs, mean(allRipRates(:,behEpochs),1), Color='b',DisplayName="beh")
+% plot(restEpochs, mean(allRipRates(:,restEpochs),1), Color='r',DisplayName="rest")
+% title("Ripple Rates across Epochs")
+% ylabel("Ripple Rate (ripples/sec)")
+% xlabel("Epoch")
+% legend()
+% 
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     plot(behEpochs, allRipTotTime(r,behEpochs), ".", Color="b", HandleVisibility="off")
+%     plot(restEpochs, allRipTotTime(r,restEpochs), ".", Color='r', HandleVisibility="off")
+% end
+% plot(behEpochs, mean(allRipTotTime(:,behEpochs),1), Color='b',DisplayName="beh")
+% plot(restEpochs, mean(allRipTotTime(:,restEpochs),1), Color='r',DisplayName="rest")
+% title("Total Ripple Time across Epochs")
+% ylabel("(Total Ripple Time)/(SWS & Still Duration)")
+% xlabel("Epoch")
+% legend()
+% 
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     plot(behEpochs, allRipAvgDur(r,behEpochs), ".", Color="b", HandleVisibility="off")
+%     plot(restEpochs, allRipAvgDur(r,restEpochs), ".", Color='r', HandleVisibility="off")
+% end
+% plot(behEpochs, mean(allRipAvgDur(:,behEpochs),1), Color='b',DisplayName="beh")
+% plot(restEpochs, mean(allRipAvgDur(:,restEpochs),1), Color='r',DisplayName="rest")
+% title("Avg Ripple Duration across Epochs")
+% ylabel("(Total Ripple Time)/(Num Ripples)")
+% xlabel("Epoch")
+% legend()
+
+
+% Plot individual rats ripple rate, duration, and total time rippling
 figure
 hold on
-for r = 1:size(C)
-scatter(1:17, allRipRates, ".", Color='b', DisplayName="rip rate")
-scatter(1:17, allRipnDur, ".", Color="r", DisplayName="norm rip dur")
-legend()
+for r = 1:size(C_alldata,2)
+    h1 = plot(behEpochs, allRipRates(r,behEpochs), Color='b', HandleVisibility="off");
+    h2 = plot(restEpochs, allRipRates(r,restEpochs), Color='r', HandleVisibility="off");
+end
+title("Ripple Rates across Epochs by Rat")
+ylabel("Ripple Rate (ripples/sec)")
+xlabel("Epoch")
+legend([h1,h2],{"beh","rest"})
+
+figure
+hold on
+for r = 1:size(C_alldata,2)
+    h1 = plot(behEpochs, allRipTotTime(r,behEpochs), Color="b", HandleVisibility="off");
+    h2 = plot(restEpochs, allRipTotTime(r,restEpochs), Color='r', HandleVisibility="off");
+end
+title("Total Ripple Time across Epochs by Rat")
+ylabel("(Total Ripple Time)/(SWS & Still Duration)")
+xlabel("Epoch")
+legend([h1,h2],{"beh","rest"})
+
+figure
+hold on
+for r = 1:size(C_alldata,2)
+    h1 = plot(behEpochs, allRipAvgDur(r,behEpochs), Color="b", HandleVisibility="off");
+    h2 = plot(restEpochs, allRipAvgDur(r,restEpochs), Color='r', HandleVisibility="off");
+end
+title("Avg Ripple Duration across Epochs by Rat")
+ylabel("(Total Ripple Time)/(Num Ripples)")
+xlabel("Epoch")
+legend([h1,h2],{"beh","rest"})
+
 
 
