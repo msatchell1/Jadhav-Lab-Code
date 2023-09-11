@@ -627,7 +627,7 @@ allRipRates = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Ripple 
 allRipTotTime = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Total ripple time normalized by the 
 % length of SWS or still state time.
 allRipAvgDur = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % average ripple duration
-allTotPer = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Total performance across the entire epoch
+allEpochPer = zeros(size(C_allriptimes,2),size(C_allriptimes{1,1},2)); % Total performance across the entire epoch
 
 for r = 1:size(C_allriptimes,2)
     % We want to calculate ripple rate as the number of ripples divided by
@@ -635,6 +635,7 @@ for r = 1:size(C_allriptimes,2)
     % states.
     swsStates = C_swsstate{1,r};
     stillStates = C_stillstate{1,r};
+    S_behper = C_allbehper{1,r}; % Performance data
 
     for e = 1:17
         
@@ -644,6 +645,12 @@ for r = 1:size(C_allriptimes,2)
             swsStillDur = S_swsstate.total_duration + sum(S_stillstate.endtime - S_stillstate.starttime);
         else % beh epochs
             swsStillDur = sum(S_stillstate.endtime - S_stillstate.starttime);
+            % The trials are not split up by epoch, so I need to do it manually
+            % from dayouttrials (which should be named epochouttrials).
+            firstTrial = S_behper.dayouttrials(e/2,1);
+            lastTrial = S_behper.dayouttrials(e/2,2);
+            epochPer = S_behper.outreward(firstTrial:lastTrial); % Performance during this epoch
+            allEpochPer(r,e) = sum(epochPer)/size(epochPer,1);
         end
 
         S_riptimes = C_allriptimes{1,r}{1,e};
@@ -654,11 +661,15 @@ for r = 1:size(C_allriptimes,2)
         allRipTotTime(r,e) = S_riptimes.total_duration/swsStillDur;
 
         allRipAvgDur(r,e) = S_riptimes.total_duration/numRips;
+        
+       
+        
 
-        S_behper = C_allbehper{1,r};
-        allTotPer(r,e) = 
 
     end
+
+    
+    
 
 end
 
@@ -704,39 +715,82 @@ end
 % legend()
 
 
-% Plot individual rats ripple rate, duration, and total time rippling
-figure
-hold on
+% % Plot individual rats ripple rate, duration, and total time rippling
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     h1 = plot(behEpochs, allRipRates(r,behEpochs), Color='b', HandleVisibility="off");
+%     h2 = plot(restEpochs, allRipRates(r,restEpochs), Color='r', HandleVisibility="off");
+% end
+% title("Ripple Rates across Epochs by Rat")
+% ylabel("Ripple Rate (ripples/sec)")
+% xlabel("Epoch")
+% legend([h1,h2],{"beh","rest"})
+% 
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     h1 = plot(behEpochs, allRipTotTime(r,behEpochs), Color="b", HandleVisibility="off");
+%     h2 = plot(restEpochs, allRipTotTime(r,restEpochs), Color='r', HandleVisibility="off");
+% end
+% title("Total Ripple Time across Epochs by Rat")
+% ylabel("(Total Ripple Time)/(SWS & Still Duration)")
+% xlabel("Epoch")
+% legend([h1,h2],{"beh","rest"})
+% 
+% figure
+% hold on
+% for r = 1:size(C_alldata,2)
+%     h1 = plot(behEpochs, allRipAvgDur(r,behEpochs), Color="b", HandleVisibility="off");
+%     h2 = plot(restEpochs, allRipAvgDur(r,restEpochs), Color='r', HandleVisibility="off");
+% end
+% title("Avg Ripple Duration across Epochs by Rat")
+% ylabel("(Total Ripple Time)/(Num Ripples)")
+% xlabel("Epoch")
+% legend([h1,h2],{"beh","rest"})
+
+
+% Plot the ripple information and performance on a seperate fig for each
+% rat
 for r = 1:size(C_alldata,2)
+    f1 = figure;
+    subplot(3,1,1)
+    sgtitle(sprintf("%s",load_rats{r}), interpreter="none")
+    hold on
     h1 = plot(behEpochs, allRipRates(r,behEpochs), Color='b', HandleVisibility="off");
     h2 = plot(restEpochs, allRipRates(r,restEpochs), Color='r', HandleVisibility="off");
-end
-title("Ripple Rates across Epochs by Rat")
-ylabel("Ripple Rate (ripples/sec)")
-xlabel("Epoch")
-legend([h1,h2],{"beh","rest"})
+    h3 = plot(behEpochs, allEpochPer(r,behEpochs), Color='k', HandleVisibility="off");
+    title("Ripple Rates")
+    ylabel("Ripple Rate (ripples/sec)")
+    xlabel("Epoch")
+    legend([h1,h2,h3],{"beh","rest","perf"},Location="best")
 
-figure
-hold on
-for r = 1:size(C_alldata,2)
+    subplot(3,1,2)
+    hold on
     h1 = plot(behEpochs, allRipTotTime(r,behEpochs), Color="b", HandleVisibility="off");
     h2 = plot(restEpochs, allRipTotTime(r,restEpochs), Color='r', HandleVisibility="off");
-end
-title("Total Ripple Time across Epochs by Rat")
-ylabel("(Total Ripple Time)/(SWS & Still Duration)")
-xlabel("Epoch")
-legend([h1,h2],{"beh","rest"})
+    % h3 = plot(behEpochs, allEpochPer(r,behEpochs), Color='k', HandleVisibility="off");
+    title("Total Ripple Time")
+    ylabel("(Total Ripple Time)/(SWS & Still Duration)")
+    xlabel("Epoch")
+    legend([h1,h2,h3],{"beh","rest"},Location="best")
 
-figure
-hold on
-for r = 1:size(C_alldata,2)
+
+    subplot(3,1,3)
+    hold on
     h1 = plot(behEpochs, allRipAvgDur(r,behEpochs), Color="b", HandleVisibility="off");
     h2 = plot(restEpochs, allRipAvgDur(r,restEpochs), Color='r', HandleVisibility="off");
+    % h3 = plot(behEpochs, allEpochPer(r,behEpochs), Color='k', HandleVisibility="off");
+    title("Avg Ripple Duration")
+    ylabel("(Total Ripple Time)/(Num Ripples)")
+    xlabel("Epoch")
+    legend([h1,h2,h3],{"beh","rest"},Location="best")
+
+    pause
+    close(f1)
+
 end
-title("Avg Ripple Duration across Epochs by Rat")
-ylabel("(Total Ripple Time)/(Num Ripples)")
-xlabel("Epoch")
-legend([h1,h2],{"beh","rest"})
+
 
 
 
