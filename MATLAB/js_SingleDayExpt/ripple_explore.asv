@@ -170,108 +170,108 @@ brainAreas = {'CA1','PFC'};
 
 
 
-% % Plot LFP with ripple times in one rat/epoch. Also include SWS, still
-% % and run times.
-% % NOTE still states overlap with SWS states, so anytime there is a SWS
-% % state that is gauranteed to also be a still state.
-% r = 8; % rat number
-% eStr = "05"; % epoch number
-% e = str2num(eStr);
-% riptetsStr = {'06','07', '11','12', '22','24','25','09'};
-% riptets = [6,7, 11,12, 22,24,25,9];
-% ydisp = [8,7,4,3,0,-1,-2,-3];
-% 
-% 
-% figure;
-% hold on;
-% ripple_labels = {};
-% 
-% for rt = 1:length(riptets)
-%     % CHECK that rat number, epoch, and tetrode match the loaded file
-%     load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/JS34_direct/EEG/JS34eegref01-%s-%s.mat",eStr,riptetsStr{rt}))
-% 
-%     % See main_explore on why I am using eegref instead of eeg.
-% 
-%     refData = eegref{1,1}{1,e}{1,riptets(rt)};
-%     timeRange = (refData.starttime : 1/refData.samprate : refData.endtime)';
-%     refV = refData.data/refData.voltage_scaling; % Remove scaling factor
-%     refV = refV/1000; % Change from microvolts to millivolts.
-% 
-%     plot(timeRange, refV+ydisp(rt))
-% 
-% end
-% 
-% % Get ripple time data
-% riptData = C_allriptimes{1,r}{1,e};
-% for i = 1:length(riptData.starttime)
-%     x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
-%     y_vertices = [min(refV+ydisp(rt)),min(refV+ydisp(rt)),max(refV),max(refV)];
-%     patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.6, 'EdgeColor','none')
-% end
-% 
-% 
-% % I need to plot velocity with the times I have designated as "run" to check that 
-% % what I did worked.
-% posData = C_alldata(find(contains(filetypes,'pos01')),:); % Grabs position file data.
-% swsData = C_allstates(find(contains(stateNames,'sws')),:);
-% stillData = C_allstates(find(contains(stateNames,'still')),:);
-% runData = C_allstates(find(contains(stateNames,'run')),:);
-% posStruct = posData{1,r}{1,e};
-% swsStruct = swsData{1,r}{1,e};
-% stillStruct = stillData{1,r}{1,e};
-% runStruct = runData{1,r}{1,e};
-% vel = posStruct.data(:,5);
-% vel_sm = sgolayfilt(vel, 2, 31); % Smoothing the data.
-% 
-% % Plot velocity
-% plot(posStruct.data(:,1), vel_sm)
-% 
-% % Plot sws times
-% swsLabels = {};
-% for i = 1:length(swsStruct.starttime)
-%     x_vertices = [swsStruct.starttime(i),swsStruct.endtime(i),swsStruct.endtime(i),swsStruct.starttime(i)];
-%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm)+1,max(vel_sm)+1];
-%     patch(x_vertices, y_vertices, [0 0.4470 0.7410],'FaceAlpha', 0.3, 'EdgeColor','none') % blue
-% 
-%     if i == 1
-%         swsLabels{i} = "sws times";
-%     else
-%         swsLabels{i} = "";
-%     end
-% end
-% 
-% % Plot still times
-% stillLabels = {};
-% for i = 1:length(stillStruct.starttime)
-%     x_vertices = [stillStruct.starttime(i),stillStruct.endtime(i),stillStruct.endtime(i),stillStruct.starttime(i)];
-%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
-%     patch(x_vertices, y_vertices, [0 0.9 1],'FaceAlpha', 0.3, 'EdgeColor','none') % light blue
-% 
-%     if i == 1
-%         stillLabels{i} = "still times";
-%     else
-%         stillLabels{i} = "";
-%     end
-% end
-% 
-% % Plot run times
-% runLabels = {};
-% for i = 1:length(runStruct.starttime)
-%     x_vertices = [runStruct.starttime(i),runStruct.endtime(i),runStruct.endtime(i),runStruct.starttime(i)];
-%     y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
-%     patch(x_vertices, y_vertices, [0.6 0.9 0],'FaceAlpha', 0.3, 'EdgeColor','none') % light green
-% 
-%     if i == 1
-%         runLabels{i} = "run times";
-%     else
-%         runLabels{i} = "";
-%     end
-% end
-% 
-% title(sprintf("Rat %d, Epoch %d",r,e))
-% % ylabel("Voltage (mV)")
-% xlabel("Time (s)")
-% % legend(riptetsStr,swsLabels{:})
+% Plot LFP with ripple times in one rat/epoch. Also include SWS, still
+% and run times.
+% NOTE still states overlap with SWS states, so anytime there is a SWS
+% state that is gauranteed to also be a still state.
+r = 8; % rat number
+eStr = "05"; % epoch number
+e = str2num(eStr);
+riptetsStr = {'06','07', '11','12', '22','24','25','09'};
+riptets = [6,7, 11,12, 22,24,25,9];
+ydisp = [8,7,4,3,0,-1,-2,-3];
+
+
+figure;
+hold on;
+ripple_labels = {};
+
+for rt = 1:length(riptets)
+    % CHECK that rat number, epoch, and tetrode match the loaded file
+    load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/JS34_direct/EEG/JS34eegref01-%s-%s.mat",eStr,riptetsStr{rt}))
+
+    % See main_explore on why I am using eegref instead of eeg.
+
+    refData = eegref{1,1}{1,e}{1,riptets(rt)};
+    timeRange = (refData.starttime : 1/refData.samprate : refData.endtime)';
+    refV = refData.data/refData.voltage_scaling; % Remove scaling factor
+    refV = refV/1000; % Change from microvolts to millivolts.
+
+    plot(timeRange, refV+ydisp(rt))
+
+end
+
+% Get ripple time data
+riptData = C_allriptimes{1,r}{1,e};
+for i = 1:length(riptData.starttime)
+    x_vertices = [riptData.starttime(i),riptData.endtime(i),riptData.endtime(i),riptData.starttime(i)];
+    y_vertices = [min(refV+ydisp(rt)),min(refV+ydisp(rt)),max(refV),max(refV)];
+    patch(x_vertices, y_vertices, [0.4940 0.1840 0.5560],'FaceAlpha', 0.6, 'EdgeColor','none')
+end
+
+
+% I need to plot velocity with the times I have designated as "run" to check that 
+% what I did worked.
+posData = C_alldata(find(contains(filetypes,'pos01')),:); % Grabs position file data.
+swsData = C_allstates(find(contains(stateNames,'sws')),:);
+stillData = C_allstates(find(contains(stateNames,'still')),:);
+runData = C_allstates(find(contains(stateNames,'run')),:);
+posStruct = posData{1,r}{1,e};
+swsStruct = swsData{1,r}{1,e};
+stillStruct = stillData{1,r}{1,e};
+runStruct = runData{1,r}{1,e};
+vel = posStruct.data(:,5);
+vel_sm = sgolayfilt(vel, 2, 31); % Smoothing the data.
+
+% Plot velocity
+plot(posStruct.data(:,1), vel_sm)
+
+% Plot sws times
+swsLabels = {};
+for i = 1:length(swsStruct.starttime)
+    x_vertices = [swsStruct.starttime(i),swsStruct.endtime(i),swsStruct.endtime(i),swsStruct.starttime(i)];
+    y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm)+1,max(vel_sm)+1];
+    patch(x_vertices, y_vertices, [0 0.4470 0.7410],'FaceAlpha', 0.3, 'EdgeColor','none') % blue
+
+    if i == 1
+        swsLabels{i} = "sws times";
+    else
+        swsLabels{i} = "";
+    end
+end
+
+% Plot still times
+stillLabels = {};
+for i = 1:length(stillStruct.starttime)
+    x_vertices = [stillStruct.starttime(i),stillStruct.endtime(i),stillStruct.endtime(i),stillStruct.starttime(i)];
+    y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+    patch(x_vertices, y_vertices, [0 0.9 1],'FaceAlpha', 0.3, 'EdgeColor','none') % light blue
+
+    if i == 1
+        stillLabels{i} = "still times";
+    else
+        stillLabels{i} = "";
+    end
+end
+
+% Plot run times
+runLabels = {};
+for i = 1:length(runStruct.starttime)
+    x_vertices = [runStruct.starttime(i),runStruct.endtime(i),runStruct.endtime(i),runStruct.starttime(i)];
+    y_vertices = [min(vel_sm),min(vel_sm),max(vel_sm),max(vel_sm)];
+    patch(x_vertices, y_vertices, [0.6 0.9 0],'FaceAlpha', 0.3, 'EdgeColor','none') % light green
+
+    if i == 1
+        runLabels{i} = "run times";
+    else
+        runLabels{i} = "";
+    end
+end
+
+title(sprintf("Rat %d, Epoch %d",r,e))
+% ylabel("Voltage (mV)")
+xlabel("Time (s)")
+% legend(riptetsStr,swsLabels{:})
 
 
 
@@ -640,20 +640,18 @@ for r = 1:size(C_allriptimes,2)
     % swsStates = C_swsstate{1,r};
     stillStates = C_stillstate{1,r};
     S_behper = C_allbehper{1,r}; % Performance data
+
     for e = 1:17
         
         S_stillstate = stillStates{1,e};
         stillDur = sum(S_stillstate.endtime - S_stillstate.starttime);
-        
-        if mod(e,2) == 0 % beh epochs
-            % The trials are not split up by epoch, so I need to do it manually
-            % from dayouttrials (which should be named epochouttrials).
-            firstTrial = S_behper.dayouttrials(e/2,1);
-            lastTrial = S_behper.dayouttrials(e/2,2);
-            epochPer = S_behper.outreward(firstTrial:lastTrial); % Performance during this epoch
-            allEpochPer(r,e) = sum(epochPer)/size(epochPer,1);
-        end
 
+        % The trials are not split up by epoch, so I need to do it manually
+        % from dayouttrials (which should be named epochouttrials).
+        firstTrial = S_behper.dayouttrials(e/2,1);
+        lastTrial = S_behper.dayouttrials(e/2,2);
+        epochPer = S_behper.outreward(firstTrial:lastTrial); % Performance during this epoch
+        allEpochPer(r,e) = sum(epochPer)/size(epochPer,1);
         fprintf("Still Dur: %.1f \n",sum(S_stillstate.endtime - S_stillstate.starttime))
 
 
@@ -666,7 +664,14 @@ for r = 1:size(C_allriptimes,2)
 
         allRipAvgDur(r,e) = S_riptimes.total_duration/numRips;
         
-    end  
+       
+        
+
+
+    end
+
+    
+    
 
 end
 
@@ -767,7 +772,7 @@ for r = 1:size(C_alldata,2)
     h1 = plot(behEpochs, allRipTotTime(r,behEpochs), Color="b", HandleVisibility="off");
     h2 = plot(restEpochs, allRipTotTime(r,restEpochs), Color='r', HandleVisibility="off");
     % h3 = plot(behEpochs, allEpochPer(r,behEpochs), Color='k', HandleVisibility="off");
-    title("% of Time Spent Rippling in Still")
+    title("Normalized Total Ripple Time")
     ylabel("(Total Ripple Time)/(SWS & Still Duration)")
     xlabel("Epoch")
     legend([h1,h2,h3],{"beh","rest"},Location="best")
