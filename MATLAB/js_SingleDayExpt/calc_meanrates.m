@@ -1,4 +1,4 @@
-function [FR_allStates,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,C_allStates,C_allSpikes)
+function [FR_allStates,isPyrMat,isInhMat,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,C_allStates,C_allSpikes)
 %CALC_MEANRATES Calculates the mean firing rates for neurons in the states
 %included in C_allstates based on occurances of each state.
 %
@@ -18,6 +18,12 @@ function [FR_allStates,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,
 %   across all rats, which is constant across epochs allowing for a square
 %   matrix. NaNs pad the matrix where cells exist either in a different
 %   brain area or different epoch.
+%
+%   isPyrMat - (tot num neurons) x (num epochs) logical matrix indicating
+%   if neuron is a pyramidal cell.
+%
+%   isInhMat - (tot num neurons) x (num epochs) logical matrix indicating
+%   if neuron is an inhibitory cell.
 %
 %   Occ_allStates - (num states) x (num rats) cell array. Each cell
 %   contains a cell array of 1 x (num epochs), and within those cells are
@@ -43,6 +49,11 @@ end
 
 % To hold firing rates for all states held in C_allstates
 FR_allStates = cell(size(C_allStates,1),length(brainAreas));
+% Logical matrices indicating pyramidal or inhibitory cell
+isPyrMat = [];
+isInhMat = [];
+flag = 0; % To only add data to the isPyr and isInh mats only once.
+
 % Time duration of states by epoch. (num states) x  (num rats) x (num epochs).
 Dur_allStates = zeros(size(C_allStates,1),size(C_allStates,2),size(nonemptyEpochs,2));
 % Dur_ratRef = zeros(size(C_allStates,1),size(C_allStates,2),size(nonemptyEpochs,2)); % Array to reference rat number
@@ -65,6 +76,9 @@ for a = 1:length(brainAreas)
             nonempty(1,:) = ~cellfun(@isempty, C_allStates{s2,r});
             % To hold mean firing rate data across all epochs for a single rat.
             ratMeans = NaN(length([C_allSpikes{1,r}{1,1}{:}]), length(C_allSpikes{1,r}));
+            % To hold 1s and 0s indicating is pyramidal/inhibitory cell
+            ratisPyr = zeros(length([C_allSpikes{1,r}{1,1}{:}]), length(C_allSpikes{1,r}));
+            ratisInh = zeros(length([C_allSpikes{1,r}{1,1}{:}]), length(C_allSpikes{1,r}));
             % To hold state occurances for all epochs.
             occEpochs = cell(1,length(C_allStates{s2,r}));
     
@@ -82,6 +96,8 @@ for a = 1:length(brainAreas)
                     nrnsAlltets = [C_allSpikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets.
                     STs_inState = cell(1,length(nrnsAlltets)); % Cell of spike times that occur within the given state.
                     % Columns are neurons.
+                    epochisPyr = zeros(1,size(nrnsAlltets,2));
+                    epochisInh = zeros(1,size(nrnsAlltets,2));
         
                     for o = 1:size(epochData.starttime,1) % Loop through occurances of that state.
         
@@ -112,27 +128,67 @@ for a = 1:length(brainAreas)
                     Dur_allStates(s2,r,e) = stateDur;
                     % Dur_ratRef(s2,r,e) = r;
                     FRmeans = NaN(size(STs_inState)); % To hold mean firing rate of nrns.
-                    for nrn = 1:size(STs_inState,2)
+                    for nrn = 1:size(nrnsAlltets,2)
                         if ~isempty(STs_inState{1,nrn}) % Important to leave nrns with no spikes as NaNs.
                             meanFR = length(STs_inState{1,nrn})/stateDur; % Calculate mean firing rate
                             FRmeans(1,nrn) =  meanFR;
+                        end
+
+                        % Identify pyramidal vs inhibitory neurons
+                        if isfield(nrnsAlltets{nrn},'meanrate')
+                            if nrnsAlltets{nrn}.meanrate <= 7 % Call this pyramidal
+                                epochisPyr(1,nrn) = 1;
+                            elseif nrnsAlltets{nrn}.meanrate > 7 % Call this inhibitory
+                                epochisInh(1,nrn) = 1;
+                            end
                         end
                     end
                      
                     ratMeans(:,e) = FRmeans; % Stores all FR means for that epoch.
                     occEpochs{1,e} = occTimes;
+                    ratisPyr(:,e) = epochisPyr;
+                    ratisInh(:,e) = epochisInh;
                
                 end
             end
 
             FR_allStates{s2,a} = [FR_allStates{s2,a}; ratMeans];    
             Occ_allStates{s2,r} = occEpochs;
+            if flag == 0 % This must only be run once, else I will concatenate 
+                % the same info onto the matrices for (brain regions) x
+                % (states) number of times.
+                isPyrMat = [isPyrMat; ratisPyr];
+                isInhMat = [isInhMat; ratisInh];           
+            end
+            if r == size(C_allStates,2) % trips flag after all rats have been run through once.
+                flag = 1;
+            end
         end
     fprintf("       FRs for state %d completed. \n",s2)
     end
 end
 
 
+% Now the final problem: isPyr and isInh mats may have columns that are
+% zeros if the first state doesn't occur during some epochs. This compares
+% the number of epochs a cell is considered either pyramidal or inhibitory
+% and makes a decision based on majority. Ties are discarded.
+for nrn = 1:size(isPyrMat,1)
+    if sum(isPyrMat(nrn,:)) < sum(isInhMat(nrn,:))
+        isInhMat(nrn,:) = 1;
+        isPyrMat(nrn,:) = 0;
+    elseif sum(isPyrMat(nrn,:)) > sum(isInhMat(nrn,:))
+        isPyrMat(nrn,:) = 1;
+        isInhMat(nrn,:) = 0;
+    elseif sum(isPyrMat(nrn,:)) == sum(isInhMat(nrn,:))
+        isPyrMat(nrn,:) = 0;
+        isInhMat(nrn,:) = 0;
+    end
+
+end
+% Convert to logical arrays
+isPyrMat = logical(isPyrMat);
+isInhMat = logical(isInhMat);
 
 
 

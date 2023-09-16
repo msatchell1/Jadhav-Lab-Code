@@ -8,7 +8,7 @@
 
 clearvars;
 
-data_dir = '/mnt/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+data_dir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
 % For this analysis I want to consider all rats, and all nrns on all
 % tetrodes for each rat.
 
@@ -143,7 +143,7 @@ C_riptets = {
 % methodNames = {"Justin"};
 
 % C_allripmeth = cell(1,length(load_rats));
-rStr = "ER1_NEW"; % rat name
+rStr = "ZT2"; % rat name
 r = find(contains(load_rats,rStr));
 % for r = 1:length(load_rats)
     % rStr = load_rats{r};
@@ -169,8 +169,8 @@ r = find(contains(load_rats,rStr));
             tetStr = C_riptets{1,r}{1,rt};
             tet = str2double(tetStr);
         
-            eegref = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%seegref01-%s-%s.mat",rStr,short_name,eStr,tetStr));
-            eegripple = load(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%sripple01-%s-%s.mat",rStr,short_name,eStr,tetStr));
+            eegref = load(sprintf("/media/msatchell/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%seegref01-%s-%s.mat",rStr,short_name,eStr,tetStr));
+            eegripple = load(sprintf("/media/msatchell/10TBSpinDisk/js_SingleDayExpt/%s_direct/EEG/%sripple01-%s-%s.mat",rStr,short_name,eStr,tetStr));
             
             refData = eegref.eegref{1,1}{1,e}{1,tet};
             timeRange = (refData.starttime : 1/refData.samprate : refData.endtime)';
@@ -334,6 +334,17 @@ r = find(contains(load_rats,rStr));
             isgtpk_isltz = timeRange > pkt & isltz == 1; % times greater than peak time and with zscore less than zero.
             starttimeidx = find(isltpk_isltz,1,"last");
             endtimeidx = find(isgtpk_isltz,1,"first");
+
+            if isempty(starttimeidx) % If there are no zscore values less than zero
+                % before the first peak, set the starttime to be the first
+                % value in timeRange.
+                starttimeidx = 1;
+            end
+            if isempty(endtimeidx) % Likewise for a possible peak at the end of
+                % timeRange.
+                endtimeidx = size(timeRange,1);
+            end
+
             % Actually record start and end times around the peak.
             starttimes(p) = timeRange(starttimeidx);
             endtimes(p) = timeRange(endtimeidx);
@@ -374,7 +385,7 @@ r = find(contains(load_rats,rStr));
     % file, it must be embeded in an outer 1x1 cell array.
     rippletimes_MES = {};
     rippletimes_MES{1,1} = rippletimes;
-    save(sprintf("/mnt/10TBSpinDisk/js_SingleDayExpt/%s_direct/%srippletimes_MES.mat",rStr,short_name),"rippletimes_MES")
+    save(sprintf("/media/msatchell/10TBSpinDisk/js_SingleDayExpt/%s_direct/%srippletimes_MES.mat",rStr,short_name),"rippletimes_MES")
 % end
 
 
