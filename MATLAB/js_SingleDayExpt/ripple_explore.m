@@ -755,78 +755,175 @@ end
 % Plot firing rates for each state along side ripple measures
 
 
-% Plot rates by epoch and state, seperated into pyrimidal and inhibitory.
-% Pyramidal
-stateEpochF = figure;
-sgtitle("Mean Pyramidal FR (CA1 Ripples)")
-stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]]; % Color of data, will be plotted with stateNames order.
-for a = 1:size(FR_allStates,2)
-   
-    subplot(1,size(FR_allStates,2),a)
-    hold on;
+% % Plot rates by epoch and state, seperated into pyrimidal and inhibitory.
+% % Pyramidal
+% stateEpochF = figure;
+% sgtitle("Mean Pyramidal FR (CA1 Ripples)")
+% stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]]; % Color of data, will be plotted with stateNames order.
+% for a = 1:size(FR_allStates,2)
+% 
+%     subplot(1,size(FR_allStates,2),a)
+%     hold on;
+% 
+%     for s = 1:size(FR_allStates,1)
+%         % Calculate mean firing rate, standard deviation, and SEM values for
+%         % each rest epoch.
+%         FRpyr = FR_allStates{s,a}; % get state FRs
+%         FRpyr(~isPyrMat) = NaN; % Set non-pyramidal cells to NaN
+%         FRmeans = mean(FRpyr,1,'omitnan');
+%         FRstds = std(FRpyr,0,1,'omitnan');
+%         numnrns = sum(~isnan(FRpyr),1);
+%         FRsems = FRstds./sqrt(numnrns);
+% 
+%         FR_CIs = zeros(2,size(FRmeans,2));
+%         CI_pct = 75; % Confidence interval value in percent.
+%         for e = 1:size(FRmeans,2)
+%             temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+%             FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+%         end
+%         plotEpochs = 1:17;
+%         plotEpochs = plotEpochs(~isnan(FRmeans));
+%         errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
+%         plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
+%     end
+% 
+%     title(brainAreas{a})
+%     ylabel("Mean Firing Rate (Hz)")
+%     xlabel("Epoch")
+%     L = legend([stateNames,"beh"]);
+% 
+% end
+% % Inhibitory
+% stateEpochF = figure;
+% sgtitle("Mean Inhibitory FR (CA1 Ripples)")
+% stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]]; % Color of data, will be plotted with stateNames order.
+% for a = 1:size(FR_allStates,2)
+% 
+%     subplot(1,size(FR_allStates,2),a)
+%     hold on;
+% 
+%     for s = 1:size(FR_allStates,1)
+%         % Calculate mean firing rate, standard deviation, and SEM values for
+%         % each rest epoch.
+%         FRinh = FR_allStates{s,a}; % get state FRs
+%         FRinh(~isInhMat) = NaN; % Set non-pyramidal cells to NaN
+%         FRmeans = mean(FRinh,1,'omitnan');
+%         FRstds = std(FRinh,0,1,'omitnan');
+%         numnrns = sum(~isnan(FRinh),1);
+%         FRsems = FRstds./sqrt(numnrns);
+% 
+%         FR_CIs = zeros(2,size(FRmeans,2));
+%         CI_pct = 75; % Confidence interval value in percent.
+%         for e = 1:size(FRmeans,2)
+%             temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+%             FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+%         end
+%         plotEpochs = 1:17;
+%         plotEpochs = plotEpochs(~isnan(FRmeans));
+%         errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
+%         plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
+%     end
+% 
+%     title(brainAreas{a})
+%     ylabel("Mean Firing Rate (Hz)")
+%     xlabel("Epoch")
+%     L = legend([stateNames,"beh"]);
+% 
+% end
 
-    for s = 1:size(FR_allStates,1)
-        % Calculate mean firing rate, standard deviation, and SEM values for
-        % each rest epoch.
-        FRpyr = FR_allStates{s,a}; % get state FRs
-        FRpyr(~isPyrMat) = NaN; % Set non-pyramidal cells to NaN
-        FRmeans = mean(FRpyr,1,'omitnan');
-        FRstds = std(FRpyr,0,1,'omitnan');
-        numnrns = sum(~isnan(FRpyr),1);
-        FRsems = FRstds./sqrt(numnrns);
-        
-        FR_CIs = zeros(2,size(FRmeans,2));
-        CI_pct = 75; % Confidence interval value in percent.
-        for e = 1:size(FRmeans,2)
-            temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
-            FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+
+% Plot FR of beh or rest epochs seperately by state, seperated into pyrimidal and inhibitory.
+for et = 1:2 % Loop through beh and rest 
+    epochTypes = {'behavior','rest'};
+    if strcmp(epochTypes{et}, 'behavior') % behavioral epochs
+        plotEpochs = behEpochs;
+        plotStateNames = {'ripple','run','still'};
+        stateColors = [[0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+        plotStateIdxs = find(contains(stateNames, plotStateNames));
+    elseif strcmp(epochTypes{et}, 'rest') % Rest epochs
+        plotEpochs = restEpochs;    
+        plotStateNames = {'sws','rem','ripple','run','still'};
+        stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+        plotStateIdxs = find(contains(stateNames, plotStateNames));
+    end
+    FR_States = FR_allStates(plotStateIdxs,:);
+
+    PyrF = figure;
+    sgtitle(sprintf("%s Mean Pyramidal FR (CA1 Ripples)",epochTypes{et}))
+    for a = 1:size(FR_States,2)
+       
+        subplot(1,size(FR_States,2),a)
+        hold on;
+        for s = 1:size(FR_States,1)
+            % Calculate mean firing rate, standard deviation, and SEM values for
+            % each rest epoch.
+            FRpyr = FR_States{s,a}; % get state FRs
+            FRpyr(~isPyrMat) = NaN; % Set non-pyramidal cells to NaN
+            FRmeans = mean(FRpyr,1,'omitnan');
+            FRstds = std(FRpyr,0,1,'omitnan');
+            numnrns = sum(~isnan(FRpyr),1);
+            FRsems = FRstds./sqrt(numnrns);
+            
+            FR_CIs = zeros(2,size(FRmeans,2));
+            CI_pct = 75; % Confidence interval value in percent.
+            for e = 1:size(FRmeans,2)
+                temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+                FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+            end
+            errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
+            plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
         end
-        plotEpochs = 1:17;
-        plotEpochs = plotEpochs(~isnan(FRmeans));
-        errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
-        plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
+    
+        title(brainAreas{a})
+        ylabel("Mean Firing Rate (Hz)")
+        xlabel("Epoch")
+        L = legend(plotStateNames);
+    
+    end
+    % Inhibitory
+    InhF = figure;
+    sgtitle(sprintf("%s Mean Inhibitory FR (CA1 Ripples)",epochTypes{et}))
+    for a = 1:size(FR_States,2)
+       
+        subplot(1,size(FR_States,2),a)
+        hold on;
+        for s = 1:size(FR_States,1)
+            % Calculate mean firing rate, standard deviation, and SEM values for
+            % each rest epoch.
+            FRinh = FR_States{s,a}; % get state FRs
+            FRinh(~isInhMat) = NaN; % Set non-pyramidal cells to NaN
+            FRmeans = mean(FRinh,1,'omitnan');
+            FRstds = std(FRinh,0,1,'omitnan');
+            numnrns = sum(~isnan(FRinh),1);
+            FRsems = FRstds./sqrt(numnrns);
+            
+            FR_CIs = zeros(2,size(FRmeans,2));
+            CI_pct = 75; % Confidence interval value in percent.
+            for e = 1:size(FRmeans,2)
+                temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+                FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+            end
+            % plotEpochs = 1:17;
+            % plotEpochs = plotEpochs(~isnan(FRmeans));
+            errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
+            plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
+        end
+    
+        title(brainAreas{a})
+        ylabel("Mean Firing Rate (Hz)")
+        xlabel("Epoch")
+        L = legend(plotStateNames);
+    
     end
 
-    title(brainAreas{a})
-    ylabel("Mean Firing Rate (Hz)")
-    xlabel("Epoch")
-    L = legend([stateNames,"beh"]);
 
 end
-% Inhibitory
-stateEpochF = figure;
-sgtitle("Mean Inhibitory FR (CA1 Ripples)")
-stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]]; % Color of data, will be plotted with stateNames order.
-for a = 1:size(FR_allStates,2)
-   
-    subplot(1,size(FR_allStates,2),a)
-    hold on;
 
-    for s = 1:size(FR_allStates,1)
-        % Calculate mean firing rate, standard deviation, and SEM values for
-        % each rest epoch.
-        FRinh = FR_allStates{s,a}; % get state FRs
-        FRinh(~isInhMat) = NaN; % Set non-pyramidal cells to NaN
-        FRmeans = mean(FRinh,1,'omitnan');
-        FRstds = std(FRinh,0,1,'omitnan');
-        numnrns = sum(~isnan(FRinh),1);
-        FRsems = FRstds./sqrt(numnrns);
-        
-        FR_CIs = zeros(2,size(FRmeans,2));
-        CI_pct = 75; % Confidence interval value in percent.
-        for e = 1:size(FRmeans,2)
-            temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
-            FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
-        end
-        plotEpochs = 1:17;
-        plotEpochs = plotEpochs(~isnan(FRmeans));
-        errorbar(plotEpochs,FRmeans(plotEpochs),FR_CIs(1,plotEpochs),FR_CIs(2,plotEpochs),".", Color=stateColors(s,:))
-        plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
-    end
 
-    title(brainAreas{a})
-    ylabel("Mean Firing Rate (Hz)")
-    xlabel("Epoch")
-    L = legend([stateNames,"beh"]);
 
-end
+% PLOT FRACTION OF CELLS PARTICIPATING IN RIPPLES! 
+
+
+
+
+

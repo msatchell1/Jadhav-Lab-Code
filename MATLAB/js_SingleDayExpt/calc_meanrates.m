@@ -66,7 +66,7 @@ Occ_allStates = cell(size(C_allStates,1),size(C_allStates,2));
 for a = 1:length(brainAreas)
     fprintf("Working on %s... \n",brainAreas{a})
     
-    for s2 = 1:size(C_allStates,1)
+    for s2 = 1:size(C_allStates,1) % Loops through all states (e.g. 'sws','rem','ripple'...)
     
         % Gets epochs that have data for this state. This should be identical across rats.
         nonempty = zeros(1,length(C_allStates{1,1}));
