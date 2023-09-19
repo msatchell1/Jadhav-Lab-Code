@@ -73,7 +73,7 @@ for a = 1:length(brainAreas)
 
             % The number of participating cells per ripple
             hasSpikes = ~cellfun(@isempty,STs_inRip);
-            S_ripMtcs.fracNrns{1,r}{1,e} = sum(hasSpikes,2)/size(hasSpikes,2);
+            S_ripMtcs.fracNrns{1,r}{1,e}
             
         end
         
