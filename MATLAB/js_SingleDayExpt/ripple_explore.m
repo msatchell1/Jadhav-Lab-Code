@@ -921,7 +921,66 @@ end
 
 
 
-% PLOT FRACTION OF CELLS PARTICIPATING IN RIPPLES! 
+%% Calculate ripple metrics
+
+S_ripMtcs = calc_ripplemetrics(brainAreas,C_allriptimes,C_allspikes);
+%% Plot average number of spikes and average fraction of cells in ripples across animals
+% I NEED TO DO RIPPLE-BY-RIPPLE ANALYSIS. Not averaging over all ripples
+% for a single epoch.
+
+numSpikesMat = zeros(size(C_allriptimes,2),17);
+fracNrnsMat = zeros(size(C_allriptimes,2),17);
+for r = 1:size(C_allriptimes,2)
+
+    for e = 1:17
+
+        numSpikesMat(r,e) = mean(sum(S_ripMtcs.numSpikes{1,r}{1,e},2),1);
+        fracNrnsMat(r,e) = mean(S_ripMtcs.fracNrns{1,r}{1,e},1);
+
+    end
+end
+
+stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+
+figure;
+title("Avg Number of Spikes Within Ripples")
+hold on;
+
+meanNumSpk = mean(numSpikesMat,1);
+stdNumSpk = std(numSpikesMat,0,1);
+semNumSpk = stdNumSpk/sqrt(size(numSpikesMat,1));
+
+errorbar(behEpochs,meanNumSpk(behEpochs),semNumSpk(behEpochs),".",Color='b')
+plot(behEpochs,meanNumSpk(behEpochs), Color='b', LineWidth=2, HandleVisibility='off')
+
+errorbar(restEpochs,meanNumSpk(restEpochs),semNumSpk(restEpochs),".",Color='k')
+plot(restEpochs,meanNumSpk(restEpochs), Color='k', LineWidth=2, HandleVisibility='off')
+
+xlabel("Epoch")
+L = legend({"beh","rest"});
+
+
+
+figure;
+title("Avg Fraction of Cells Within Ripples")
+hold on;
+
+meanFracNrn = mean(fracNrnsMat,1);
+stdFracNrn = std(fracNrnsMat,0,1);
+semFracNrn = stdFracNrn/sqrt(size(fracNrnsMat,1));
+
+errorbar(behEpochs,fracNrnsMat(behEpochs),semFracNrn(behEpochs),".",Color='b')
+plot(behEpochs,fracNrnsMat(behEpochs), Color='b', LineWidth=2, HandleVisibility='off')
+
+errorbar(restEpochs,fracNrnsMat(restEpochs),semFracNrn(restEpochs),".",Color='k')
+plot(restEpochs,fracNrnsMat(restEpochs), Color='k', LineWidth=2, HandleVisibility='off')
+
+xlabel("Epoch")
+L = legend({"beh","rest"});
+
+
+
+
 
 
 

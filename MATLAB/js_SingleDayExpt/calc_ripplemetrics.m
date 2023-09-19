@@ -57,7 +57,7 @@ for a = 1:length(brainAreas)
                 end
             end
 
-            S_ripMtcs.STs_inRip{a,r}{1,e} = STs_inRip;
+            S_ripMtcs.spikeTimes{a,r}{1,e} = STs_inRip;
     
             occTimes = [epochData.starttime, epochData.endtime];
             occDurs = epochData.endtime - epochData.starttime;
