@@ -38,17 +38,18 @@ for a = 1:length(brainAreas)
             epochData = C_allriptimes{1,r}{1,e}; % Data on a single rat and epoch.
             nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets. 
             STs_inRip = cell(size(epochData.starttime,1),length(nrnsAlltets)); % Holds spike times for each neuron and each ripple.
-
-            for o = 1:size(epochData.starttime,1) % Loop through occurances of ripples.
-
-                for nrn = 1:length(nrnsAlltets) % Loop through all neurons in that rat/epoch
-
-                    % isfield returns false if the struct does not exist
-                    if isfield(nrnsAlltets{nrn},'data') && ~isempty(nrnsAlltets{nrn}.data)...
+            numClstNrns = 0; % Counter for the number of clustered neurons on all the tetrodes in one brain region (for that epoch).
+            
+            for nrn = 1:length(nrnsAlltets) % Loop through all neurons in that rat/epoch
+                 % isfield returns false if the struct does not exist
+                if isfield(nrnsAlltets{nrn},'data') && ~isempty(nrnsAlltets{nrn}.data)...
                             && strcmp(nrnsAlltets{nrn}.area, brainAreas{a})
-        
-                        STs = nrnsAlltets{nrn}.data(:,1); % Time of all spikes for that nrn.
 
+                    numClstNrns = numClstNrns + 1;
+                    STs = nrnsAlltets{nrn}.data(:,1); % Time of all spikes for that nrn.
+
+                    for o = 1:size(epochData.starttime,1) % Loop through occurances of ripples.
+                   
                         % Logical 1s and 0s determining if spikes fall within the state occurance window.
                         inOcc = (epochData.starttime(o) <= STs) & (STs <= epochData.endtime(o));
                         STs_inRip{o,nrn} = STs(inOcc);
@@ -69,11 +70,15 @@ for a = 1:length(brainAreas)
 
             % The number of spikes per ripple and neuron
             numSpikes = cellfun(@numel,STs_inRip);
-            S_ripMtcs.numSpikes{1,r}{1,e} = numSpikes;
+            S_ripMtcs.numSpikes{a,r}{1,e} = numSpikes;
 
-            % The number of participating cells per ripple
+            % The number of clustered neurons
+            S_ripMtcs.numClstNrns{a,r}{1,e} = numClstNrns;
+
+            % The number of participating cells per ripple (out of all
+            % those clustered for this region).
             hasSpikes = ~cellfun(@isempty,STs_inRip);
-            S_ripMtcs.fracNrns{1,r}{1,e} = sum(hasSpikes,2)/size(hasSpikes,2);
+            S_ripMtcs.fracNrns{a,r}{1,e} = sum(hasSpikes,2)/numClstNrns;
             
         end
         
