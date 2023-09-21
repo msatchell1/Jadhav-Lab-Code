@@ -924,67 +924,177 @@ end
 %% Calculate ripple metrics
 
 S_ripMtcs = calc_ripplemetrics(brainAreas,C_allriptimes,C_allspikes);
-%% Plot average number of spikes and average fraction of cells in ripples across animals
-% I NEED TO DO RIPPLE-BY-RIPPLE ANALYSIS. Not averaging over all ripples
-% for a single epoch.
 
-numSpikesMat = zeros(size(C_allriptimes,2),17);
-fracNrnsMat = zeros(size(C_allriptimes,2),17);
-for r = 1:size(C_allriptimes,2)
+%% Plots with ripple metrics
 
-    for e = 1:17
+% % Plot average number of spikes and average fraction of cells in ripples across animals 
+% for a = 1:size(brainAreas,2)
+%     numSpikesMat = zeros(size(C_allriptimes,2),17);
+%     fracNrnsMat = zeros(size(C_allriptimes,2),17);
+%     for r = 1:size(C_allriptimes,2)
+% 
+%         for e = 1:17
+%             % Normalize the number of spikes by the number of participating neurons:
+%             hasSpikes = ~cellfun(@isempty,S_ripMtcs.spikeTimes{a,r}{1,e});
+%             normNumSpikes = sum(S_ripMtcs.numSpikes{a,r}{1,e},2)./sum(hasSpikes,2);
+%             normNumSpikes(isnan(normNumSpikes)) = 0; % Some ripples have no spikes, set these to 0.
+%             numSpikesMat(r,e) = mean(normNumSpikes,1);
+%             fracNrnsMat(r,e) = mean(S_ripMtcs.fracNrns{a,r}{1,e},1);
+% 
+%         end
+%     end
+% 
+%     figure;
+%     title(sprintf("Avg Norm Number of %s Spikes Within Ripples Across Rats",brainAreas{a}))
+%     hold on;
+% 
+%     meanNumSpk = mean(numSpikesMat,1);
+%     stdNumSpk = std(numSpikesMat,0,1);
+%     semNumSpk = stdNumSpk/sqrt(size(numSpikesMat,1));
+% 
+%     for r = 1:size(C_allriptimes,2)
+%         plot(behEpochs, numSpikesMat(r,behEpochs), ".", Color='b', HandleVisibility="off")
+%         plot(restEpochs, numSpikesMat(r,restEpochs), ".", Color='k', HandleVisibility="off")
+%     end
+%     % errorbar(behEpochs,meanNumSpk(behEpochs),semNumSpk(behEpochs),".",Color='b')
+%     plot(behEpochs,meanNumSpk(behEpochs), Color='b', LineWidth=2)
+%     % errorbar(restEpochs,meanNumSpk(restEpochs),semNumSpk(restEpochs),".",Color='k')
+%     plot(restEpochs,meanNumSpk(restEpochs), Color='k', LineWidth=2)
+% 
+%     xlabel("Epoch")
+%     ylabel("(# spikes in ripple)/(# nrns in ripple)")
+%     L = legend({"beh","rest"});
+% 
+% 
+% 
+%     figure;
+%     title(sprintf("Avg Fraction of %s Cells Within Ripples Across Rats",brainAreas{a}))
+%     hold on;
+% 
+%     meanFracNrn = mean(fracNrnsMat,1);
+%     stdFracNrn = std(fracNrnsMat,0,1);
+%     semFracNrn = stdFracNrn/sqrt(size(fracNrnsMat,1));
+% 
+%     for r = 1:size(C_allriptimes,2)
+%         plot(behEpochs, fracNrnsMat(r,behEpochs), ".", Color='b', HandleVisibility="off")
+%         plot(restEpochs, fracNrnsMat(r,restEpochs), ".", Color='k', HandleVisibility="off")
+%     end
+%     % errorbar(behEpochs,meanFracNrn(behEpochs),semFracNrn(behEpochs),".",Color='b')
+%     plot(behEpochs,meanFracNrn(behEpochs), Color='b', LineWidth=2)
+%     % errorbar(restEpochs,meanFracNrn(restEpochs),semFracNrn(restEpochs),".",Color='k')
+%     plot(restEpochs,meanFracNrn(restEpochs), Color='k', LineWidth=2)
+% 
+%     xlabel("Epoch")
+%     ylabel("(# nrns in ripple)/(# clustered nrns)")
+%     L = legend({"beh","rest"});
+% end
 
-        numSpikesMat(r,e) = mean(sum(S_ripMtcs.numSpikes{1,r}{1,e},2),1);
-        fracNrnsMat(r,e) = mean(S_ripMtcs.fracNrns{1,r}{1,e},1);
 
-    end
-end
-
-stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
-
-figure;
-title("Avg Number of CA1 Spikes Within Ripples")
-hold on;
-
-meanNumSpk = mean(numSpikesMat,1);
-stdNumSpk = std(numSpikesMat,0,1);
-semNumSpk = stdNumSpk/sqrt(size(numSpikesMat,1));
-
-errorbar(behEpochs,meanNumSpk(behEpochs),semNumSpk(behEpochs),".",Color='b')
-plot(behEpochs,meanNumSpk(behEpochs), Color='b', LineWidth=2, HandleVisibility='off')
-
-errorbar(restEpochs,meanNumSpk(restEpochs),semNumSpk(restEpochs),".",Color='k')
-plot(restEpochs,meanNumSpk(restEpochs), Color='k', LineWidth=2, HandleVisibility='off')
-
-xlabel("Epoch")
-L = legend({"beh","rest"});
-
-
-
-figure;
-title("Avg Fraction of CA1 Cells Within Ripples")
-hold on;
-
-meanFracNrn = mean(fracNrnsMat,1);
-stdFracNrn = std(fracNrnsMat,0,1);
-semFracNrn = stdFracNrn/sqrt(size(fracNrnsMat,1));
-
-errorbar(behEpochs,meanFracNrn(behEpochs),semFracNrn(behEpochs),".",Color='b')
-plot(behEpochs,meanFracNrn(behEpochs), Color='b', LineWidth=2, HandleVisibility='off')
-
-errorbar(restEpochs,meanFracNrn(restEpochs),semFracNrn(restEpochs),".",Color='k')
-plot(restEpochs,meanFracNrn(restEpochs), Color='k', LineWidth=2, HandleVisibility='off')
-
-xlabel("Epoch")
-L = legend({"beh","rest"});
-
-
-
-
-%% 
-
+% % Plot the same but for each rat separately
+% 
+% for a = 1:size(brainAreas,2)
+% 
+%     figure;
+%     hold on;
+%     tl = tiledlayout(ceil(size(C_allriptimes,2)/2),2);
+%     numSpikesMat = zeros(size(C_allriptimes,2),17);
+%     fracNrnsMat = zeros(size(C_allriptimes,2),17);
+%     for r = 1:size(C_allriptimes,2)
+%         for e = 1:17
+%             % Normalize the number of spikes by the number of participating neurons:
+%             hasSpikes = ~cellfun(@isempty,S_ripMtcs.spikeTimes{a,r}{1,e});
+%             normNumSpikes = sum(S_ripMtcs.numSpikes{a,r}{1,e},2)./sum(hasSpikes,2);
+%             normNumSpikes(isnan(normNumSpikes)) = 0; % Some ripples have no spikes, set these to 0.
+%             numSpikesMat(r,e) = mean(normNumSpikes,1);
+%             fracNrnsMat(r,e) = mean(S_ripMtcs.fracNrns{a,r}{1,e},1);
+%         end
+%         nexttile
+%         hold on;
+%         title(load_rats{r})
+%         plot(behEpochs,numSpikesMat(r,behEpochs), Color='b')
+%         plot(restEpochs, numSpikesMat(r,restEpochs), Color='k')
+%     end
+%     title(tl,sprintf("Avg Number of %s Spikes Within Ripples",brainAreas{a}))
+%     xlabel(tl,"Epoch")
+%     ylabel(tl,"(# spikes in ripple)/(# nrns in ripple)")   
+%     leg = legend({"beh","rest"},Orientation='Horizontal');
+%     leg.Layout.Tile = 'north';
+% 
+%     figure;
+%     hold on;
+%     tl = tiledlayout(ceil(size(C_allriptimes,2)/2),2); 
+%     for r = 1:size(C_allriptimes,2)
+%         nexttile
+%         hold on;
+%         title(load_rats{r})
+%         plot(behEpochs, fracNrnsMat(r,behEpochs), Color='b')
+%         plot(restEpochs, fracNrnsMat(r,restEpochs), Color='k')
+%     end
+%     title(tl,sprintf("Avg Fraction of %s Cells Within Ripples",brainAreas{a}))
+%     xlabel(tl,"Epoch")
+%     ylabel(tl,"(# nrns in ripple)/(# clustered nrns)")
+%     leg = legend({"beh","rest"},Orientation='Horizontal');
+%     leg.Layout.Tile = 'north';
+% end
 
 
+% % Plot % of time in ripples, performance, fraction of cells in ripples, and
+% % number of spikes per neuron in ripples for each rat grouped by beh or
+% % rest. To make trends visible, plot normalized by max values.
+% for a = 1:size(brainAreas,2)
+% 
+%     figure;
+%     hold on;
+%     tl = tiledlayout(ceil(size(C_allriptimes,2)/2),2);
+%     numSpikesMat = zeros(size(C_allriptimes,2),17);
+%     fracNrnsMat = zeros(size(C_allriptimes,2),17);
+%     for r = 1:size(C_allriptimes,2)
+%         for e = 1:17
+%             % Normalize the number of spikes by the number of participating neurons:
+%             hasSpikes = ~cellfun(@isempty,S_ripMtcs.spikeTimes{a,r}{1,e});
+%             normNumSpikes = sum(S_ripMtcs.numSpikes{a,r}{1,e},2)./sum(hasSpikes,2);
+%             normNumSpikes(isnan(normNumSpikes)) = 0; % Some ripples have no spikes, set these to 0.
+%             numSpikesMat(r,e) = mean(normNumSpikes,1);
+%             fracNrnsMat(r,e) = mean(S_ripMtcs.fracNrns{a,r}{1,e},1);
+%         end
+%         nexttile
+%         hold on;
+%         title(load_rats{r})
+%         plot(behEpochs,numSpikesMat(r,behEpochs)/max(numSpikesMat(r,behEpochs)), Color=[0.6350 0.0780 0.1840],DisplayName="spikes per nrn")
+%         plot(behEpochs,fracNrnsMat(r,behEpochs)/max(fracNrnsMat(r,behEpochs)), Color=[0.3010 0.7450 0.9330],DisplayName="frac nrns per ripple")
+%         plot(behEpochs,allRipTotTime(r,behEpochs)/max(allRipTotTime(r,behEpochs)), Color=[0.9290 0.6940 0.1250],DisplayName="% time rippling")
+%         plot(behEpochs,allEpochPer(r,behEpochs)/max(allEpochPer(r,behEpochs)),Color=[0.4660 0.6740 0.1880],DisplayName="performance")
+%     end
+%     title(tl,sprintf("Ripple Metrics in %s During Behavior",brainAreas{a}))
+%     xlabel(tl,"Epoch")  
+%     ylabel(tl,"Fraction of Max Value")
+%     leg = legend(Orientation='Horizontal');
+%     leg.Layout.Tile = 'north';
+% 
+%     figure;
+%     hold on;
+%     tl = tiledlayout(ceil(size(C_allriptimes,2)/2),2); 
+%     for r = 1:size(C_allriptimes,2)
+%         nexttile
+%         hold on;
+%         title(load_rats{r})
+%         plot(restEpochs,numSpikesMat(r,restEpochs)/max(numSpikesMat(r,restEpochs)), Color=[0.6350 0.0780 0.1840],DisplayName="spikes per nrn")
+%         plot(restEpochs,fracNrnsMat(r,restEpochs)/max(fracNrnsMat(r,restEpochs)), Color=[0.3010 0.7450 0.9330],DisplayName="frac nrns per ripple")
+%         plot(restEpochs,allRipTotTime(r,restEpochs)/max(allRipTotTime(r,restEpochs)), Color=[0.9290 0.6940 0.1250],DisplayName="% time rippling")
+%         plot(behEpochs,allEpochPer(r,behEpochs)/max(allEpochPer(r,behEpochs)),Color=[0.4660 0.6740 0.1880],DisplayName="performance")
+%     end
+%     title(tl,sprintf("Ripple Metrics in %s During Rest",brainAreas{a}))
+%     xlabel(tl,"Epoch")
+%     ylabel(tl,"Fraction of Max Value")
+%     leg = legend(Orientation='Horizontal');
+%     leg.Layout.Tile = 'north';
+% end
 
 
+% Plot firing rates by rat and state
 
+
+% Plot the number of "large" ripples and the fraction of large ripples
+% where large is determined as having both a high fraction of participaring
+% cells and a large number of spikes. I should also consider using ripple
+% duration and peak height for identifying large ripples. 
