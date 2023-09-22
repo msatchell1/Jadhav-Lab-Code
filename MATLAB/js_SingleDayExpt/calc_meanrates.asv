@@ -16,10 +16,10 @@ function [C_stateFRs,C_isPyr,C_isInh,FR_allStates,isPyrMat,isInhMat,Occ_allState
 %   C_stateFRs - Cell array with the same data as FR_allstates, but data
 %   from each rat is kept separate.
 %
-%   C_isPyr - Cell array 1 x (num rats) of logical values
+%   C_isPyr - Cell array of same shape as C_stateFRs, logical values
 %   indicating if neuron is a pyramidal cell (< 7 Hz mean rate)
 %
-%   C_isInh - Same as C_isPyr but for inhibitory neurons.
+%   
 %
 %   FR_allStates - (num states) x (num brain areas) cell array. Each cell
 %   contains a matrix of concatenated mean rates of size (tot num neurons)
@@ -169,28 +169,28 @@ for a = 1:length(brainAreas)
                 % the same info onto the matrices for (brain regions) x
                 % (states) number of times.
 
-                % ratisPyr and ratisInh mats may have columns that are
+                % isPyr and isInh mats may have columns that are
                 % zeros if the first state doesn't occur during some epochs. This compares
                 % the number of epochs a cell is considered either pyramidal or inhibitory
                 % and makes a decision based on majority. Ties are discarded.
                 for nrn = 1:size(ratisPyr,1)
-                    if sum(ratisPyr(nrn,:)) < sum(ratisInh(nrn,:))
-                        ratisInh(nrn,:) = 1;
-                        ratisPyr(nrn,:) = 0;
-                    elseif sum(ratisPyr(nrn,:)) > sum(ratisInh(nrn,:))
-                        ratisPyr(nrn,:) = 1;
-                        ratisInh(nrn,:) = 0;
-                    elseif sum(ratisPyr(nrn,:)) == sum(ratisInh(nrn,:))
-                        ratisPyr(nrn,:) = 0;
-                        ratisInh(nrn,:) = 0;
+                    if sum(isPyrMat(nrn,:)) < sum(isInhMat(nrn,:))
+                        isInhMat(nrn,:) = 1;
+                        isPyrMat(nrn,:) = 0;
+                    elseif sum(isPyrMat(nrn,:)) > sum(isInhMat(nrn,:))
+                        isPyrMat(nrn,:) = 1;
+                        isInhMat(nrn,:) = 0;
+                    elseif sum(isPyrMat(nrn,:)) == sum(isInhMat(nrn,:))
+                        isPyrMat(nrn,:) = 0;
+                        isInhMat(nrn,:) = 0;
                     end
                 
                 end
 
                 isPyrMat = [isPyrMat; ratisPyr];
                 isInhMat = [isInhMat; ratisInh];       
-                C_isPyr{1,r} = logical(ratisPyr);
-                C_isInh{1,r} = logical(ratisInh);
+                C_isPyr{s2,a}{1,r} = logical(ratisPyr);
+                C_isInh{s2,a}{1,r} = logical(ratisInh);
             end
             if r == size(C_allStates,2) % trips flag after all rats have been run through once.
                 flag = 1;

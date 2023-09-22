@@ -1,5 +1,6 @@
 function [S_ripMtcs] = calc_ripplemetrics(brainAreas, C_allriptimes, C_allspikes)
 %CALC_RIPPLEMETRICS Calculates metrics for ripple analysis.
+% Michael Satchell 09/22/23
 %
 % Inputs:
 %   brainAreas - cell array of string, brain regions of interest.
