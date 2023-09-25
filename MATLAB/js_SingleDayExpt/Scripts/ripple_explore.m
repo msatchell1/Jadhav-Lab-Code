@@ -1088,71 +1088,71 @@ S_ripMtcs = calc_ripplemetrics(brainAreas,C_allriptimes,C_allspikes);
 % end
 
 
-% Plot firing rates by rat and state
-for r = 1:size(C_alldata,2)
-    isPyr = C_isPyr{1,r};
-    isInh = C_isInh{1,r};
-    for nt = 1:2
-        nrnTypes = {"Pyramidal","Inhibitory"};
-        figure;
-        sgtitle(sprintf("%s FR and CA1 Ripples Metrics | %s",nrnTypes{nt},load_rats{r}))
-
-        for et = 1:2 % Loop through beh and rest 
-            epochTypes = {'Behavior','Rest'};
-            if strcmp(epochTypes{et}, 'Behavior') % behavioral epochs
-                plotEpochs = behEpochs;
-                plotStateNames = {'ripple','run','still'};
-                stateColors = [[0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
-                plotStateIdxs = find(contains(stateNames, plotStateNames));
-            elseif strcmp(epochTypes{et}, 'Rest') % Rest epochs
-                plotEpochs = restEpochs;    
-                plotStateNames = {'sws','rem','ripple','run','still'};
-                stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
-                plotStateIdxs = find(contains(stateNames, plotStateNames));
-            end
-            FR_states = C_stateFRs(plotStateIdxs,:); % Note FR_States is a cell array
-               
-            for a = 1:size(FR_states,2)
-        
-                ax((et-1)*2+a) = subplot(size(epochTypes,2),size(FR_states,2),(et-1)*2+a);
-                hold on;
-                for s = 1:size(FR_states,1)
-                    % Calculate mean firing rate, standard deviation, and SEM values for
-                    % each rest epoch.
-                    FRs = FR_states{s,a}{1,r}; % get state FRs for one rat
-                    if strcmp(nrnTypes{nt},"Pyramidal")
-                        FRs(~isPyr) = NaN; % Set non-pyramidal cells to NaN
-                    elseif strcmp(nrnTypes{nt},"Inhibitory")
-                        FRs(~isInh) = NaN; % non-inhibitory cells to NaN
-                    end
-                    FRmeans = mean(FRs,1,'omitnan');
-                    FRstds = std(FRs,0,1,'omitnan');
-                    numnrns = sum(~isnan(FRs),1);
-                    FRsems = FRstds./sqrt(numnrns);
-        
-                    FR_CIs = zeros(2,size(FRmeans,2));
-                    CI_pct = 75; % Confidence interval value in percent.
-                    for e = 1:size(FRmeans,2)
-                        temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
-                        FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
-                    end
-
-                    errorbar(plotEpochs,FRmeans(plotEpochs),FRsems(plotEpochs),".", Color=stateColors(s,:))
-                    plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
-                end
-                
-                title(sprintf("%s %s",brainAreas{a},epochTypes{et}))
-                ylabel("Mean Firing Rate (Hz)")
-                xlabel("Epoch")
-                L = legend(plotStateNames, Location="best");
-                    
-            end    
-        end
-        linkaxes(ax,'xy');
-        set(ax,'xlim',[0, 18])
-    end
-    pause
-end
+% % Plot firing rates by rat and state
+% for r = 1:size(C_alldata,2)
+%     isPyr = C_isPyr{1,r};
+%     isInh = C_isInh{1,r};
+%     for nt = 1:2
+%         nrnTypes = {"Pyramidal","Inhibitory"};
+%         figure;
+%         sgtitle(sprintf("%s FR and CA1 Ripples Metrics | %s",nrnTypes{nt},load_rats{r}))
+% 
+%         for et = 1:2 % Loop through beh and rest 
+%             epochTypes = {'Behavior','Rest'};
+%             if strcmp(epochTypes{et}, 'Behavior') % behavioral epochs
+%                 plotEpochs = behEpochs;
+%                 plotStateNames = {'ripple','run','still'};
+%                 stateColors = [[0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+%                 plotStateIdxs = find(contains(stateNames, plotStateNames));
+%             elseif strcmp(epochTypes{et}, 'Rest') % Rest epochs
+%                 plotEpochs = restEpochs;    
+%                 plotStateNames = {'sws','rem','ripple','run','still'};
+%                 stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+%                 plotStateIdxs = find(contains(stateNames, plotStateNames));
+%             end
+%             FR_states = C_stateFRs(plotStateIdxs,:); % Note FR_States is a cell array
+% 
+%             for a = 1:size(FR_states,2)
+% 
+%                 ax((et-1)*2+a) = subplot(size(epochTypes,2),size(FR_states,2),(et-1)*2+a);
+%                 hold on;
+%                 for s = 1:size(FR_states,1)
+%                     % Calculate mean firing rate, standard deviation, and SEM values for
+%                     % each rest epoch.
+%                     FRs = FR_states{s,a}{1,r}; % get state FRs for one rat
+%                     if strcmp(nrnTypes{nt},"Pyramidal")
+%                         FRs(~isPyr) = NaN; % Set non-pyramidal cells to NaN
+%                     elseif strcmp(nrnTypes{nt},"Inhibitory")
+%                         FRs(~isInh) = NaN; % non-inhibitory cells to NaN
+%                     end
+%                     FRmeans = mean(FRs,1,'omitnan');
+%                     FRstds = std(FRs,0,1,'omitnan');
+%                     numnrns = sum(~isnan(FRs),1);
+%                     FRsems = FRstds./sqrt(numnrns);
+% 
+%                     FR_CIs = zeros(2,size(FRmeans,2));
+%                     CI_pct = 75; % Confidence interval value in percent.
+%                     for e = 1:size(FRmeans,2)
+%                         temp_CI = tinv([(1-CI_pct/100)/2, 1-(1-CI_pct/100)/2], numnrns(1,e)-1); 
+%                         FR_CIs(:,e) = bsxfun(@times, FRsems(e), temp_CI(:));
+%                     end
+% 
+%                     errorbar(plotEpochs,FRmeans(plotEpochs),FRsems(plotEpochs),".", Color=stateColors(s,:))
+%                     plot(plotEpochs,FRmeans(plotEpochs), Color=stateColors(s,:), LineWidth=2, HandleVisibility='off')
+%                 end
+% 
+%                 title(sprintf("%s %s",brainAreas{a},epochTypes{et}))
+%                 ylabel("Mean Firing Rate (Hz)")
+%                 xlabel("Epoch")
+%                 L = legend(plotStateNames, Location="best");
+% 
+%             end    
+%         end
+%         linkaxes(ax,'xy');
+%         set(ax,'xlim',[0, 18])
+%     end
+%     pause
+% end
 
 
 % Plot the number of "large" ripples and the fraction of large ripples
