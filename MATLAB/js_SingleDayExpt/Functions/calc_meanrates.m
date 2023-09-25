@@ -1,7 +1,14 @@
-function [C_stateFRs,C_isPyr,C_isInh,FR_allStates,isPyrMat,isInhMat,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,C_allStates,C_allSpikes)
+function [C_stateFRs,FR_allStates,Occ_allStates,Dur_allStates] = calc_meanrates(brainAreas,C_allStates,C_allSpikes)
 %CALC_MEANRATES Calculates the mean firing rates for neurons in the states
 %included in C_allstates based on occurances of each state.
 % Michael Satchell 09/22/23
+%
+% NOTE: pyramidal and inhibitory outputs were removed because far too many
+% pyramidal cells were being missed, for some reason. I plotted epoch 2
+% across all rats and using th isPyrMat on FR_allStates dropped the number
+% of cells from 532 to 340, which is far more than should be the case, and
+% looking at the epoch 2 FRs, many of the cells dropped were below 7 Hz in
+% epoch 2. 
 %
 % Inputs:
 %   brainAreas - cell array of string, brain regions of interest.

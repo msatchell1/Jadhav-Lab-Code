@@ -110,24 +110,48 @@ brainAreas = {'CA1','PFC'};
 
 
 %% Calculates firing rates, state occurance times, and state durations
-[C_stateFRs,C_isPyr,C_isInh,M_stateFR,isPyrMat,isInhMat,M_stateOcc,M_stateDur] = calc_meanrates(brainAreas,C_allstates,C_allspikes);
+[C_stateFRs,M_stateFR,M_stateOcc,M_stateDur] = calc_meanrates(brainAreas,C_allstates,C_allspikes);
 
 
 %% First thing is to split the pyramidal cells into high and low FR.
 % For now I will base high and low FR on all of epoch 2.
 
-for a = 1:size(M_stateFR,2)
-    for s = 1:size(M_stateFR,1)
-        
-        
-
-    end
-end
+% for a = 1:size(M_stateFR,2)
+%     for s = 1:size(M_stateFR,1)
+% 
+% 
+% 
+%     end
+% end
 
 figure;
-scatter(M_stateFR{4,1})
+hold on;
+scatter(1:size(M_stateFR{4,1}(:,2),1),M_stateFR{4,1}(:,2))
+title(sprintf("Run FRs for all Cells Epoch 2 CA1"))
 
-M_highFR = {};
+figure;
+hold on;
+pyrFRrun = M_stateFR{4,1}(:,2);
+pyrFRrun = pyrFRrun(pyrFRrun<7);
+scatter(1:size(pyrFRrun,1),pyrFRrun)
+title(sprintf("Run FRs for Pyramidal Cells Epoch 2 CA1"))
+% It looks like a good way to split into low and high FR would be around 2
+% Hz... But lets check PFC
+
+figure;
+hold on;
+scatter(1:size(M_stateFR{4,2}(:,2),1),M_stateFR{4,2}(:,2))
+title(sprintf("Run FRs for all Cells Epoch 2 PFC"))
+
+figure;
+hold on;
+pyrFRrun = M_stateFR{4,2}(:,2);
+pyrFRrun = pyrFRrun(pyrFRrun<7);
+scatter(1:size(pyrFRrun,1),pyrFRrun)
+title(sprintf("Run FRs for Pyramidal Cells Epoch 2 PFC"))
+% 3 Hz seems like a better place to split PFC.
+
+% M_highFR = {};
 
 
 
