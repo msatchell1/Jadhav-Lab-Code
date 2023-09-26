@@ -80,7 +80,7 @@ restEpochs = 1:2:17;
 
 %% Create new rippletime files with improved SWR detection
 
-% All riptets for each animal:
+% All ripple-detecting tetrodes for each animal, as determined by Justin:
 
 % For ZT2
 % riptetsStr = {'10','11','12','13','14','15','16','17', '18','22','23', '19','20','21','24','25',...
@@ -194,9 +194,33 @@ r = find(contains(load_rats,rStr));
         
         end
         
+        % It is important to choose a good gaussian window width for ripple
+        % detection, because two things need to be considered: 1) cells in a ripple
+        % do not fire simultaneously, so the width cannot be too small or no
+        % overlap between the cell activity will be detected, and 2) cell bursting
+        % may be a factor to consider, and by using a large width the difference
+        % between a single spike and a small burst becomes small.
+        % What I think is important for using multiunit activity in ripple analysis
+        % is to incorporate the fact that ripples are special because they activate
+        % a wide distribution of neurons. High cell activity and bursting can
+        % happen outside of ripples, but the diversity in neuronal firing during the 
+        % small window of a ripple is a somewhat signature trait, and should be
+        % taken advantage of for ripple detection. To this effect, it is important
+        % that for each neuron, gaussian curves do not sum when overlapping, as
+        % this would increase the importance of bursting activity in the signal.
+        % Instead, gaussians should be summed across different neurons so as to make the
+        % signal large when there are many different neurons coincidentally active.
+        % Unfortunately it is difficult for me to figure out how to convolve
+        % without summing overlapping parts, so I will do the next closest thing:
+        % cut off the peaks at an amplitude of 1. So the overlapping tails of the gaussians
+        % will sum, but the peaks will not.
         gwinDur = 100; % Duration of gaussian window in ms.
         gwinlen = (refData.samprate/1000)*gwinDur + 1; % window length in time steps.
         gwin = gausswin(gwinlen);
+        % with a smaple rate of 1500 Hz, each time point is 2/3
+        % of a milisecond apart, so to get a 4 ms gaussian for each spike, the
+        % window must be 6 time points wide. Use an odd number so the gaussian is symmetric
+        % about the spike. 30 points = 20ms. 150 = 100ms.
         
         % Use neuron spike data only from CA1 neurons
         nrnTets = []; % Tetrodes to plot neurons from.
@@ -221,7 +245,16 @@ r = find(contains(load_rats,rStr));
                         meanRate = nrn.meanrate;
                         if meanRate < 7
                             spikeTimes = nrn.data(:,1);
-            
+                            
+                            % Convolve this window with the spike train for a neuron of
+                            % 1s and 0s. There was a problem that was occurring:
+                            % ismember needs exact equality between the timepoints in
+                            % spikeTmes and timeRange to identify matches, but the
+                            % spike times rarely line up with the times in timeRange,
+                            % regardless of whether the spike or LFP data start and end
+                            % times are used. So, ismembertol is used to fix this by
+                            % allowing a 1/samprate window of tolerance for determining
+                            % equality around each time point.
                             isSpike = ismembertol(timeRange,spikeTimes, 1/(2*refData.samprate), DataScale=1);
                             gtrace = conv(isSpike,gwin,"same");
                             cutgtrace = gtrace > 1; % where to cut off summed peaks
@@ -243,6 +276,11 @@ r = find(contains(load_rats,rStr));
         zGtrace = zscore(sumGtrace);
         
         % Calculate zscore of sum of envelope zscores of all tetrodes and plot.
+        % Each tetrode's z-scored envelope measures, relatively, the power of the ripple band 
+        % for that tetrode, and if we add all the zEnvs together we get the
+        % population relative zscore. Zscoring this sum shows the significance of
+        % power changes for the all tetrodes while maintaining the difference in
+        % mean ripple power for each tetrode.
         sumzEnv = sum(riptetszEnvs,2);
         popEnvzscore = zscore(sumzEnv); % Zscore of all tetrodes
         

@@ -399,7 +399,7 @@ brainAreas = {'CA1','PFC'};
 % % Instead, gaussians should be summed across different neurons so as to make the
 % % signal large when there are many different neurons coincidentally active.
 % % Unfortunately it is difficult for me to figure out how to convolve
-% % without summing overlapping parts, so I will do the next closest thing
+% % without summing overlapping parts, so I will do the next closest thing:
 % % cut off the peaks at an amplitude of 1. So the overlapping tails of the gaussians
 % % will sum, but the peaks will not.
 % gwinlen = 151;
