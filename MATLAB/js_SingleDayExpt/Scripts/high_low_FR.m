@@ -113,6 +113,15 @@ brainAreas = {'CA1','PFC'};
 [C_stateFRs,M_stateFR,M_stateOcc,M_stateDur] = calc_meanrates(brainAreas,C_allstates,C_allspikes);
 
 
+
+
+
+%% Test how many cells switch between < 7 Hz FR and > 7 Hz over the epochs
+% Do this to determine the best way to label interneurons.
+
+
+
+
 %% First thing is to split the pyramidal cells into high and low FR.
 % For now I will base high and low FR on all of epoch 2.
 
