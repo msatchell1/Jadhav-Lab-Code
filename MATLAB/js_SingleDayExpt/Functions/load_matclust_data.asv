@@ -1,4 +1,4 @@
-function [C_] = load_matclust_data(dataDir,loadRats,filetypes)
+function [C_matclust] = load_matclust_data(dataDir,loadRats)
 %LOAD_MATCLUST_DATA Loads matclust data structures from dataDir
 %
 % This function loads matclust data from rats specified in loadRats,
@@ -9,50 +9,47 @@ function [C_] = load_matclust_data(dataDir,loadRats,filetypes)
 % order as the elements in filetypes.
 %   
 
-
+filetype = "matclust_param";
 C_matclust = {}; 
 
 disp("Loading matclust data... ")
 for r = 1:length(loadRats)
     fprintf("Loading animal: %s \n",loadRats{r})
+   
+   % Gets the directories to all matclust_param files, which are the files
+   % for tetrodes that have clustered cells on them.
+    FileDir = dir(dataDir+"/"+loadRats(r)+'.matclust'+"/"+filetype+"*");
 
-    for ft = 1:length(filetypes)    
-
-        shortName = loadRats{r};
-        chop_idx = strfind(loadRats{r},'_') - 1;
-        if ~isempty(chop_idx)
-            shortName = loadRats{r}(1:chop_idx); % Gets the first characters of the rat's name before an '_'.
-            % So far this is only needed for ER1_NEW to remove the '_NEW'.
-        end
-
-        
-        FileDir = dir(dataDir+"/"+loadRats(r)+'_direct'+"/"+shortName+filetypes{ft}+"*");
+    if isempty(FileDir)
+        error("%s files do not exist for animal: %s \n",filetype,loadRats{r})
+    end
     
-        if isempty(FileDir)
-            error("%s file does not exist for animal: %s \n",filetypes{ft},loadRats{r})
-        elseif length(FileDir) > 1
-            error("More than one file detected when searching for: %s, in animal: %s \n" + ...
-                "Change names in filetypes to be more specific.", filetypes{ft},loadRats{r});
-        else
-            file = struct2cell(load(string(fullfile(FileDir.folder, FileDir.name)))); % load data
-            file = file{:};
-            if iscell(file)
-                C_matclust{ft,r} = file{1,1};
-            else
-                C_matclust{ft,r} = file;
-            end
-            fprintf("       Loaded file: %s  \n",  FileDir.name)
-        end
+    for f = 1:size(FileDir,1)
+        structFile = load(string(fullfile(FileDir(f).folder, FileDir(f).name))); % load data
+        clustattrib = structFile.clustattrib;
+
+        cutIdx = strfind(clustattrib.datafile,'waves_');
+        wavesFile = load(string(fullfile(FileDir(f).folder, clustattrib.datafile(cutIdx:end))));
+
+        % if contains(char(clustattrib.datafile),"\")
+        %     strIdxs = find(contains(char(clustattrib.datafile),"\"));
+        %     cutIdx = strIdx(end);
+        % 
+        %     wavesFile = load(string(fullfile(FileDir(f).folder, clustattrib.datafile(cutIdx+1:end))));
+        % else
+        %     wavesFile = load(string(fullfile(FileDir(f).folder, clustattrib.datafile)));
+        
+        C_matclust{f,r} = struct('clustattrib',clustattrib, 'waves',wavesFile{1,1});
+        fprintf("       Loaded file: %s  \n",  FileDir(f).name)
+
     end
 end
 
-C_matclust = clip_17_epochs(C_matclust); % removes extra epoch data.
 
 
 
 
-
-
+fprintf("Finished loading matclust data.")
 
 
 

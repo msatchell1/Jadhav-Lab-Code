@@ -73,10 +73,9 @@ for r = 1:size(C_matclust,2)
             % NEXT to do:
             % 1) figure out how to link matclust tetrode order (mt) to the
             % actual order in C_allspikes.
-            % 2) Make histograms of spikewidths in CA1 and PFC, check that
-            % I agree with the decision line on what to call interneurons.
-            % 3) Assign cells their spikewidth and classification as pyramidal or
-            % interneuron.
+            % 2) Assign cells their spikewidth and classification as pyr or
+            % inh
+
         end
     end
 end
