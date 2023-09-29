@@ -1,24 +1,18 @@
-function [C_FRs] = label_interneurons(C_allspikes,brainAreas,loadRats)
+function [C_FRs] = label_interneurons(brainAreas,loadRats)
 %FIND_INTERNEURONS Label interneurons based on mean firing rate.
 %   Detailed explanation goes here
 
 
 % This is how Shantanu, Frank 2016 sorted out interneurons:
-% For PFC: Fast-spiking (FS) putative inhibitory interneurons (n = 10) were
+% For PFC: "Fast-spiking (FS) putative inhibitory interneurons (n = 10) were
 % detected by a consistent spike width and firing rate criterion across the 
 % two tasks (spikewidth < 0.3 ms and firing rate > 17 Hz) and excluded from further analysis. A further 31
 % cells were excluded as they did not have sufficient number of spikes (< 50) for
 % quantification of SWR modulation. This analysis therefore included a total of 312 PFC
 % neurons. Similarly for CA1 neurons, FS neurons (n = 22, spike-width < 0.3 ms and firing
-% rate > 7 Hz).
+% rate > 7 Hz)."
 
 
-dataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt/matclust files';
-
-% Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
-filetypes = {};
-
-C_matclust = load_matclust_data(dataDir,loadRats);
 
 
 %%
@@ -36,16 +30,55 @@ C_matclust = load_matclust_data(dataDir,loadRats);
 % are interneurons like Shantanu, Frank 2016: in PFC having a spikewidth < 0.3 ms
 % and FR > 17 Hz. In CA1 having spike width < 0.3 ms and firing rate > 7 Hz. 
 
-allSpikewidths = [];
-for r = 1:size(C_matclust,2)
+
+% Load spiking data so cell type and spikewidth attributes can be added to
+% the neuron structs.
+dataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+loadRats = 
+% Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
+filetypes = {'spikes01'};
+
+C_alldata = load_data(dataDir,loadRats,filetypes);
+
+spikes_idx = find(contains(filetypes,'spikes01')); 
+if isempty(spikes_idx)
+    error("spikes01 data must be loaded to run this analysis.")
+end
+
+C_allspikes = C_alldata(spikes_idx,:);
+
+
+% Edit to folder of matclust files for each rat. Name of each subfolder
+% should be '*Rat name*.matclust'
+matclustDataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt/matclust files';
+
+allNrnStructs = {};
+for r = 1:size(loadRats,2)
     
-    for mt = 1:size(C_matclust,1) % NOTE this is not the tetrode number because these
+    for mt = 1:size(C_allspikes{1,r}{1,1},2) % NOTE this is not the tetrode number because these
         % are out of order.
+
+        % Loads matclust data from one rat and one tetrode.
+        matclustTet = load_matclust_data(matclustDataDir,loadRats{1,r},mt);
+
+        if isempty(matclustTet)
+
+            fprintf("No clustered cells on tet: %d",mt)
 
         clustattrib = C_matclust{mt,r}.clustattrib;
         allWaveforms = C_matclust{mt,r}.waves;
         clusters = clustattrib.clusters; % Each cluster is a cell
+        
+        % Now find extract the tetrode number from the filenames in
+        % clustattrib.
+        startStr = "_nt"; % target string before tetrode number
+        endStr = ".mat"; % string after tet num
+        startIdx = strfind(clustattrib.currentfilename,startStr);
+        endIdx = strfind(clustattrib.currentfilename,endStr);
+        tetnum = str2double(clustattrib.currentfilename(tgtIdx+strlength(tgtStr):endIdx-1));
+
         for nrn = 1:size(clusters,2)
+            nrnStruct = struct([]);
             % Long column vector of spike indices for the waves file.
             spikeIndxs = clusters{1,nrn}.index;
             % The waveforms for all spikes of this cell as measured on all
@@ -67,12 +100,27 @@ for r = 1:size(C_matclust,2)
             % maxIdx that the trough occurs.
             spikewidth_s = spikewidth/30000; % Assumes 30,000 Hz sampling rate.
             
-            allSpikewidths(end+1) = spikewidth_s;
+            nrnStruct.spikewidth = spikewidth_s;
+
+            % Get the neuron's mean rate averaged across all epochs
+            nrnFRepochs = nan(17);
+            for e = 1:17
+                if ~isempty(C_allspikes{1,r}{1,e}(1,tetnum))
+                    if ~isempty(C_allspikes{1,r}{1,e}{1,tetnum}(1,nrn))
+                        nrnEpoch= C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn};
+                        nrnFRepochs(e) = nrnEpoch.meanrate; % Mean rate of each epoch
+                        nrnStruct.area = nrnEpoch.area;
+
+                    end
+                end
+            end
+            meanrate = mean(nrnFRepochs,'omitnan');
+            nrnStruct.meanrate = meanrate;
+            
+            allNrnStructs{mt,r}{nrn} = nrnStruct;
 
 
             % NEXT to do:
-            % 1) figure out how to link matclust tetrode order (mt) to the
-            % actual order in C_allspikes.
             % 2) Make histograms of spikewidths in CA1 and PFC, check that
             % I agree with the decision line on what to call interneurons.
             % 3) Assign cells their spikewidth and classification as pyramidal or
@@ -81,8 +129,6 @@ for r = 1:size(C_matclust,2)
     end
 end
 
-figure;
-histogram(allSpikewidths,25)
 
 
 %%
