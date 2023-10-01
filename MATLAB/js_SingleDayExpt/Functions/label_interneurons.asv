@@ -34,7 +34,10 @@ function [C_FRs] = label_interneurons(brainAreas,loadRats)
 % Load spiking data so cell type and spikewidth attributes can be added to
 % the neuron structs.
 dataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
-loadRats = 
+loadRats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+% loadRats = {'JS34'};
+
+brainAreas = {'CA1','PFC'};
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
 filetypes = {'spikes01'};
 
@@ -54,66 +57,83 @@ matclustDataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt/matclust files
 
 allNrnStructs = {};
 for r = 1:size(loadRats,2)
+    fprintf("Processing matclust data for %s \n",loadRats{1,r})
     
-    for mt = 1:size(C_allspikes,1) % NOTE this is not the tetrode number because these
-        % are out of order.
+    for tetnum = 1:size(C_allspikes{1,r}{1,1},2) % Loop through all tetrodes for rat.
 
         % Loads matclust data from one rat and one tetrode.
-        matclustTet = load_matclust_data(matclustDataDir,loadRats{1,r},);
+        matclustTet = load_matclust_data(matclustDataDir,loadRats{1,r},tetnum);
 
-        clustattrib = C_matclust{mt,r}.clustattrib;
-        allWaveforms = C_matclust{mt,r}.waves;
-        clusters = clustattrib.clusters; % Each cluster is a cell
-        
-        % Now find extract the tetrode number from the filenames in
-        % clustattrib.
-        startStr = "_nt"; % target string before tetrode number
-        endStr = ".mat"; % string after tet num
-        startIdx = strfind(clustattrib.currentfilename,startStr);
-        endIdx = strfind(clustattrib.currentfilename,endStr);
-        tetnum = str2double(clustattrib.currentfilename(tgtIdx+strlength(tgtStr):endIdx-1));
+        % % Now find extract the tetrode number from the filenames in
+        % % clustattrib.
+        % startStr = "_nt"; % target string before tetrode number
+        % endStr = ".mat"; % string after tet num
+        % startIdx = strfind(clustattrib.currentfilename,startStr);
+        % endIdx = strfind(clustattrib.currentfilename,endStr);
+        % tetnum = str2double(clustattrib.currentfilename(tgtIdx+strlength(tgtStr):endIdx-1));
 
-        for nrn = 1:size(clusters,2)
-            nrnStruct = struct([]);
-            % Long column vector of spike indices for the waves file.
-            spikeIndxs = clusters{1,nrn}.index;
-            % The waveforms for all spikes of this cell as measured on all
-            % 4 electrodes of the tetrode.
-            waveforms4 = allWaveforms(:,:,spikeIndxs);
-            meanWF4 = mean(waveforms4,3,'omitnan'); % Takes mean shape across all spikes
-            % figure
-            % plot(meanWF4) % Empty plots are clusters with no spikes.
-            % pause
-            % close all
-
-            % Return peak heights for all electrode channels
-            pk4 = max(meanWF4,[],1);
-            [maxPk4, maxIdx4] = max(pk4); % largest peak among electrodes
-            meanWF = meanWF4(:,maxIdx4);
-            [WFmax,maxIdx] = max(meanWF);
-            [WFmin, spikewidth] = min(meanWF(maxIdx:end)); % Note the index here
-            % is spikewidth because it measures how many indices after
-            % maxIdx that the trough occurs.
-            spikewidth_s = spikewidth/30000; % Assumes 30,000 Hz sampling rate.
+        if any(~isfield(matclustTet,{'clustattrib','waves'})) % Note the strings MUST be character vectors.
+            % fprintf("Missing or incomplete data on tet: %d \n",tetnum)
             
-            nrnStruct.spikewidth = spikewidth_s;
+        else
+            clustattrib = matclustTet.clustattrib;
+            allWaveforms = matclustTet.waves;
+            clusters = clustattrib.clusters; % Each cluster is a cell
+        
+            for nrn = 1:size(clusters,2)
+                nrnStruct = struct();
+                % Long column vector of spike indices for the waves file.
+                spikeIndxs = clusters{1,nrn}.index;
+                % The waveforms for all spikes of this cell as measured on all
+                % 4 electrodes of the tetrode.
+                waveforms4 = allWaveforms(:,:,spikeIndxs);
+                meanWF4 = mean(waveforms4,3,'omitnan'); % Takes mean shape across all spikes
+                % figure
+                % plot(meanWF4) % Empty plots are clusters with no spikes.
+                % pause
+                % close all
+    
+                % Return peak heights for all electrode channels
+                pk4 = max(meanWF4,[],1);
+                [maxPk4, maxIdx4] = max(pk4); % largest peak among electrodes
+                meanWF = meanWF4(:,maxIdx4);
+                [WFmax,maxIdx] = max(meanWF);
+                [WFmin, spikewidth] = min(meanWF(maxIdx:end)); % Note the index here
+                % is spikewidth because it measures how many indices after
+                % maxIdx that the trough occurs.
+                spikewidth_s = spikewidth/30000; % Assumes 30,000 Hz sampling rate.
+                
+                nrnStruct.spikewidth = spikewidth_s;
+    
+                % Get the neuron's mean rate averaged across all epochs
+                nrnFRepochs = nan(1,17);
+                for e = 1:17
+                    if ~isempty(C_allspikes{1,r}{1,e}(1,tetnum))
+                        if isfield(C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn},'meanrate') &&...
+                                isfield(C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn},'area')
 
-            % Get the neuron's mean rate averaged across all epochs
-            nrnFRepochs = nan(17);
-            for e = 1:17
-                if ~isempty(C_allspikes{1,r}{1,e}(1,tetnum))
-                    if ~isempty(C_allspikes{1,r}{1,e}{1,tetnum}(1,nrn))
-                        nrnEpoch= C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn};
-                        nrnFRepochs(e) = nrnEpoch.meanrate; % Mean rate of each epoch
-                        nrnStruct.area = nrnEpoch.area;
+                            nrnEpoch= C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn};
+                            nrnFRepochs(1,e) = nrnEpoch.meanrate; % Mean rate of each epoch
+                            nrnStruct.area = nrnEpoch.area;
 
+                        end
                     end
                 end
+                
+
+                            nrnStruct.meanFRepochs = nrnFRepochs;
+                meanrate = mean(nrnFRepochs,2,'omitnan');
+                nrnStruct.meanrate = meanrate;
+                
+                allNrnStructs{tetnum,r}{nrn} = nrnStruct;
+
+                % % Save changes back to neuron struct
+                % C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn}.epochFRs = nrnFRepochs;
+                % C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn}.acrossEpochFR = meanrate;
+                % C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn}.spikeWidth = spikewidth_s;
+                % C_allspikes{1,r}{1,e}{1,tetnum}{1,nrn}.nrnType = 
+
             end
-            meanrate = mean(nrnFRepochs,'omitnan');
-            nrnStruct.meanrate = meanrate;
-            
-            allNrnStructs{mt,r}{nrn} = nrnStruct;
 
 
             % NEXT to do:
@@ -121,6 +141,59 @@ for r = 1:size(loadRats,2)
             % I agree with the decision line on what to call interneurons.
             % 3) Assign cells their spikewidth and classification as pyramidal or
             % interneuron.
+            % 4) Find neurons in allNrnStructs that don't exist in C_allspikes
+            % and see if this is because they did not spike enough.
+        end
+    end
+
+    % % Save data from each rat to overwrite original file.
+    % spikes = C_allspikes(1,r);
+    % 
+    % short_name = loadRats{r};
+    % chop_idx = strfind(loadRats{r},'_') - 1;
+    % if ~isempty(chop_idx)
+    %     short_name = loadRats{r}(1:chop_idx); % Gets the first characters of the rat's name before an '_'.
+    %     % So far this is only needed for ER1_NEW to remove the '_NEW'.
+    % end
+    % 
+    % save(string(fullfile(dataDir,sprintf("%s_direct/%sspikes01.mat",loadRats{r},short_name))),"spikes")
+    % fprintf("Saved file: %sspikes01",short_name)
+end
+
+%% Plot the spikewidth vs meanrate data
+
+
+for a = 1:size(brainAreas,2)
+    figure;
+    hold on;
+    title(sprintf("%s Spikewidth vs Avg Epoch Mean FR",brainAreas{1,a}))
+    ylabel("spike width (ms)")
+    xlabel("mean FR (Hz)")
+    yline(0.3,'--k')
+    if strcmp(brainAreas{1,a},'CA1')
+        xline(7,'--k')
+    else
+        xline(17,'--k')
+    end
+
+    for r = 1:size(allNrnStructs,2)
+
+        for tet = 1:size(allNrnStructs(:,r),1)
+
+            if ~isempty(allNrnStructs{tet,r})
+
+                for nrn = 1:size(allNrnStructs{tet,r},2)
+                    
+                    nrnData = allNrnStructs{tet,r}{1,nrn};
+
+                    if isfield(nrnData,'area') && strcmp(nrnData.area,brainAreas{1,a})
+                        
+    
+                        plot(nrnData.meanrate,nrnData.spikewidth*1000,"ob")
+                    end
+
+                end
+            end
         end
     end
 end
@@ -128,84 +201,19 @@ end
 
 
 %%
-for a = 1:size(brainAreas,2)
 
-    for r = 1:size(C_allspikes,2)
-        % To hold mean firing rate data across all epochs for a single rat.
-        ratFRmeans = NaN(length([C_allspikes{1,r}{1,1}{:}]), length(C_allspikes{1,r}));
-
-        for e = 1:size(C_allspikes{1,r},2)
-
-
-            nrnsAlltets = [C_allspikes{1,r}{1,e}{:}]; % Combining nrn spike data from all tets.
-
-            epochisPyr = zeros(1,size(nrnsAlltets,2));
-            epochisInh = zeros(1,size(nrnsAlltets,2));
-            epochFRmeans = NaN(1,size(nrnsAlltets,2));
-
-            for nrn = 1:length(nrnsAlltets)
-        
-                
-                if isfield(nrnsAlltets{nrn},'meanrate') && strcmp(nrnsAlltets{nrn}.area, brainAreas{a})
-
-                    epochFRmeans(1,nrn) = nrnsAlltets{nrn}.meanrate;
-
-                end
-
-
-
-                    
-                
-            end
-
-            ratFRmeans(:,e) = epochFRmeans; % Turns row vector into column vector. 
-            % Each column is an epoch, rows are neurons.
-            
-
-
-
-        end
-
-
-        % Find neurons that fire during at least one epoch
-        numNaNepochs = sum(isnan(ratFRmeans),2);
-        isActiveNrn = numNaNepochs < size(C_allspikes{1,r},2); % 1 for nrns that have any 
-        % non-NaN epochs, and 0 otherwise.
-
-        count = 0;
-        ratBothMeans = [];
-        figure;
-        hold on;
-        
-        for nrn = 1:size(ratFRmeans,1)
-            nrnFRsNaN = ratFRmeans(nrn,:);
-            nrnFRs = nrnFRsNaN(~isnan(nrnFRsNaN));
-            pltEpochs = find(~isnan(nrnFRsNaN));
-            % if ~isempty(nrnFRs) && any(nrnFRs > 7) && any(nrnFRs <= 7) 
-            if ~isempty(nrnFRs) && all(nrnFRs < 7)
-            % if ~isempty(nrnFRs)
-
-                count = count + 1;
-                ratBothMeans(nrn,:) = nrnFRsNaN;
-                plot(pltEpochs,nrnFRs,'*-')
-
-            end
-        end
-        xlabel("Epochs")
-        ylabel("Mean FR")
-        title(sprintf("Region %s Rat %d | count = %d/%d \n",brainAreas{a},r,count,sum(isActiveNrn,1)))
-        % fprintf("%s Rat %d | above&below7Hz = %d/%d \n",brainAreas{a},r,count,sum(isActiveNrn,1))
-        
-        pause
-        close all
-
-        C_FRs{1,a}{1,r} = ratFRmeans;
-
-    end
-
+% Plotting spikewidth vs mean rate averaged across all epochs shows that
+% the data clusters reasonably well, indicating that I can probably trust
+% averaging FRs across all epochs to identify interneurons.
+if strcmp(nrnEpoch.area, 'CA1')
     
+    % Finds interneurons. The minimum necessary spike width increases as
+    % the mean FR increases with a slope of 0.01 ms/Hz, such that at 27 Hz
+    % the threshold is a 0.5 ms spikewidth.
+    if acrossEpochFR >= 7 && 1000*spikewidth_s <= (0.3+.01*(acrossEpochFR-7))
 
-end
+        
+
 
 
 
