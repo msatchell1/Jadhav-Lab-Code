@@ -16,7 +16,7 @@ dataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt'; % Location of data f
 loadRats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01','spikes01','tetinfo','linfields01','rippletime01','pos01'
-filetypes = {'spikes01','tetinfo','pos01','sws01','rem01','rippletimes_MES','behavperform'};
+filetypes = {'cellinfo','spikes01','tetinfo','pos01','sws01','rem01','rippletimes_MES','behavperform'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes); % Load data to struct
 
@@ -52,10 +52,10 @@ if isempty(spikes_idx)
     error("spikes01 data must be loaded to run this analysis.")
 end
 
-% cellinfo_idx = find(contains(filetypes,'cellinfo'));
-% if isempty(cellinfo_idx)
-%     error("cellinfo data must be loaded to run this analysis.")
-% end
+cellinfo_idx = find(contains(filetypes,'cellinfo'));
+if isempty(cellinfo_idx)
+    error("cellinfo data must be loaded to run this analysis.")
+end
 
 states_idx = find(contains(filetypes, stateFiles));
 if isempty(states_idx)
@@ -91,7 +91,7 @@ end
 C_swsstate = C_alldata(sws_idx,:);
 C_remstate = C_alldata(rem_idx,:);
 C_allspikes = C_alldata(spikes_idx,:);
-% C_allinfo = C_alldata(cellinfo_idx,:);
+C_allinfo = C_alldata(cellinfo_idx,:);
 C_allstates = C_alldata(states_idx,:);
 % C_alllinf = C_alldata(linf_idx,:);
 C_runstate = create_runstate(C_alldata(pos_idx,:));
@@ -116,51 +116,21 @@ brainAreas = {'CA1','PFC'};
 
 
 
-%% Test how many cells switch between < 7 Hz FR and > 7 Hz over the epochs
-% Do this to determine the best way to label interneurons.
-
-
-
-
-%% First thing is to split the pyramidal cells into high and low FR.
-% For now I will base high and low FR on all of epoch 2.
-
-% for a = 1:size(M_stateFR,2)
-%     for s = 1:size(M_stateFR,1)
-% 
-% 
-% 
-%     end
-% end
-
+%% Show that my labeling worked properly by plotting spike width vs mean FR
+% So one problem is that many cells only fire during wake or sleep epochs,
+% and so have empty C_allspikes entries for the epochs that they do not
+% fire (or were just not clustered on). 
 figure;
 hold on;
-scatter(1:size(M_stateFR{4,1}(:,2),1),M_stateFR{4,1}(:,2))
-title(sprintf("Run FRs for all Cells Epoch 2 CA1"))
+title("Interneuron Labeling")
+xlabel("Mean FR Across all Epochs (Hz)")
+ylabel("Spike Width (ms)")
 
-figure;
-hold on;
-pyrFRrun = M_stateFR{4,1}(:,2);
-pyrFRrun = pyrFRrun(pyrFRrun<7);
-scatter(1:size(pyrFRrun,1),pyrFRrun)
-title(sprintf("Run FRs for Pyramidal Cells Epoch 2 CA1"))
-% It looks like a good way to split into low and high FR would be around 2
-% Hz... But lets check PFC
+for r = 1:size(C_allspikes,2)
 
-figure;
-hold on;
-scatter(1:size(M_stateFR{4,2}(:,2),1),M_stateFR{4,2}(:,2))
-title(sprintf("Run FRs for all Cells Epoch 2 PFC"))
+    for e = 1:size(C_allspikes{1,r},2)
 
-figure;
-hold on;
-pyrFRrun = M_stateFR{4,2}(:,2);
-pyrFRrun = pyrFRrun(pyrFRrun<7);
-scatter(1:size(pyrFRrun,1),pyrFRrun)
-title(sprintf("Run FRs for Pyramidal Cells Epoch 2 PFC"))
-% 3 Hz seems like a better place to split PFC.
-
-% M_highFR = {};
+        nrnsAllTets = 
 
 
 
