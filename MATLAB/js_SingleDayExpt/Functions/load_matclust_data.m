@@ -13,9 +13,12 @@ function [matclustTet] = load_matclust_data(dataDir,loadRat,tetnum)
 %   directory. Can be between 1 and the number of matclust_param
 %   files, otherwise an empty struct is returned.
 %
+%   tetnum - tetrode number to load.
+%
 % Outputs: 
 %   C_matclust - Cell array to hold data for all rats. Rows are
-%   tetrodes on which cells were clustered, columns are rats.
+%   tetrodes on which cells were clustered, columns are rats. In this
+%   version of the function only one tetrode (tetnum) is loaded.
 %   
 
 filetype = "matclust_param_nt"+string(tetnum)+".mat";
