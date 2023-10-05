@@ -120,6 +120,12 @@ brainAreas = {'CA1','PFC'};
 % So one problem is that many cells only fire during wake or sleep epochs,
 % and so have empty C_allspikes entries for the epochs that they do not
 % fire (or were just not clustered on). 
+%
+% I think what I should do is write a function that creates a new .mat file
+% that holds all the cell information I think is important (like
+% cellinfo_MES) and which doesn't contain seperate structs for each epoch,
+% but rather only rats / tetrodes / cells
+
 figure;
 hold on;
 title("Interneuron Labeling")
@@ -131,6 +137,12 @@ for r = 1:size(C_allspikes,2)
     for e = 1:size(C_allspikes{1,r},2)
 
         nrnsAllTets = 
+
+
+    end
+end
+
+
 
 
 
