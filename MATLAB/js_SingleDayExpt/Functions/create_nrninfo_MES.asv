@@ -49,12 +49,7 @@ for r = 1:size(loadRats,2)
 
               for nrn = 1:size(C_allspikes{1,r}{1,e}{1,tet})
 
-                  if isfield(C_allspikes{1,r}{1,e}{1,tet}, 'data')
-                    S_nrn = C_allspikes{1,r}{1,e}{1,tet};
-
-                  end
-              end
-        end
+                  S_nrn = 
 
 
 
