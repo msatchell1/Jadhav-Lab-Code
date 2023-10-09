@@ -1,7 +1,9 @@
 function [C_alldata] = load_data(dataDir,loadRats,filetypes)
 %LOAD_DATA Loads .mat data from Justin's single day experiment _direct
-%folders.
-
+%folders. Note that if data is loaded that is not formatted with epochs
+%along the columns for each rat, then it will be clipped off past 17
+%columns by clip_17_epochs.
+%
 %   Output:
 %       C_alldata - length(filetypes) x length(loadRats) cell array.
 

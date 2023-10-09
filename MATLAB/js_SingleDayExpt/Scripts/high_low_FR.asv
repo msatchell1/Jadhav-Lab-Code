@@ -116,12 +116,22 @@ brainAreas = {'CA1','PFC'};
 
 
 
+%% Calculates firing rates, state occurance times, and state durations
+[C_stateFRs,M_stateFR,M_stateOcc,M_stateDur] = calc_meanrates(brainAreas,C_allstates,C_allspikes);
+
+
+
+
 
 %% Show that my labeling worked properly by plotting spike width vs mean FR
 % So one problem is that many cells only fire during wake or sleep epochs,
 % and so have empty C_allspikes entries for the epochs that they do not
 % fire (or were just not clustered on). 
-
+%
+% I think what I should do is write a function that creates a new .mat file
+% that holds all the cell information I think is important (like
+% cellinfo_MES) and which doesn't contain seperate structs for each epoch,
+% but rather only rats / tetrodes / cells
 
 
 for a = 1:size(brainAreas,2)
@@ -137,17 +147,18 @@ for a = 1:size(brainAreas,2)
 
             S_nrn = C_nrninfo{1,r}{nrn,1};
 
-            if strcmp(S_nrn.area,brainAreas{a})
                 if strcmp(S_nrn.type,"Pyr")
                     plot(S_nrn.meanFR,S_nrn.meanSW*1000,"ob")
                 elseif strcmp(S_nrn.type,"Int")
                     plot(S_nrn.meanFR,S_nrn.meanSW*1000,"or")
                 end
-            end
     
         end
     end
 end
+
+
+
 
 
 

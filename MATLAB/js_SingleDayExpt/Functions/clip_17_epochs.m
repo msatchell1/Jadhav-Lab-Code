@@ -26,7 +26,7 @@ for ft = 1:size(C_alldata,1)
 
        epoch_array = C_alldata{ft,r};
 
-       if length(epoch_array) <= 17
+       if size(epoch_array,2) <= 17
         C_alldata_clipped{ft,r} = epoch_array;
        else
         C_alldata_clipped{ft,r} = epoch_array(1:17); % Selects first 17 epochs and stores them.

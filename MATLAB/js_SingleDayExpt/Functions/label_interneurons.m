@@ -1,4 +1,4 @@
-function [C_FRs] = label_interneurons(dataDir,loadRats)
+function [] = label_interneurons(dataDir,loadRats)
 %FIND_INTERNEURONS Label interneurons based on mean firing rate.
 %   Loads the spikes01 file for rats in loadRats as well as the spike
 %   waveforms for all neurons of that rat and labels ineterneurons based on
