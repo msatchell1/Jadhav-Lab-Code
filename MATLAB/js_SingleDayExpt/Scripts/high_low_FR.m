@@ -159,20 +159,215 @@ end
 
 
 
+%% Firing Rates. Plot across epochs
+
+
+for a = 1:size(brainAreas,2)
+    figure;
+    hold on;
+    title(sprintf("%s Mean FRs",brainAreas{a}))
+    xlabel("Epoch")
+    ylabel("Firing Rate (Hz)")
+    
+    for r = 1:size(C_nrninfo,2)
+    
+        for nrn = 1:size(C_nrninfo{1,r},1)
+
+            S_nrn = C_nrninfo{1,r}{nrn,1};
+
+            if strcmp(S_nrn.area,brainAreas{a})
+                if strcmp(S_nrn.type,"Pyr")
+                    plot(1:size(S_nrn.eFR,2),S_nrn.eFR,"ob")
+                elseif strcmp(S_nrn.type,"Int")
+                    plot(1:size(S_nrn.eFR,2),S_nrn.eFR,"or")
+                end
+            end
+    
+        end
+    end
+end
+
+
+%% Plot histogram of firing rates during awake epochs to identify a good
+% low/high FR dividing line.
+
+% During all epochs
+for a = 1:size(brainAreas,2)
+    figure;
+    hold on;
+    title(sprintf("%s Mean Pyr FR, Mean of All Epochs",brainAreas{a}))
+    xlabel("Firing Rate (Hz)")
+    ylabel("Count")
+    
+    FRarray = [];
+    for r = 1:size(C_nrninfo,2)
+    
+        for nrn = 1:size(C_nrninfo{1,r},1)
+
+            S_nrn = C_nrninfo{1,r}{nrn,1};
+
+            if strcmp(S_nrn.area,brainAreas{a})
+                if strcmp(S_nrn.type,"Pyr")
+                    FRarray = [FRarray, mean(S_nrn.eFR,2,'omitnan')];
+                end
+            end
+    
+        end
+    end
+    histogram(FRarray,100)
+end
+
+%% During behavioral epochs (epochs individually counted)
+for a = 1:size(brainAreas,2)
+    figure;
+    hold on;
+    title(sprintf("%s Mean Pyr FR Individual Behavioral Epochs",brainAreas{a}))
+    xlabel("Firing Rate (Hz)")
+    ylabel("Count")
+    
+    FRarray = [];
+    for r = 1:size(C_nrninfo,2)
+    
+        for nrn = 1:size(C_nrninfo{1,r},1)
+
+            S_nrn = C_nrninfo{1,r}{nrn,1};
+
+            if strcmp(S_nrn.area,brainAreas{a})
+                if strcmp(S_nrn.type,"Pyr")
+                    FRarray = [FRarray, S_nrn.eFR(behEpochs)];
+                end
+            end
+    
+        end
+    end
+    histogram(FRarray,5*ceil(sqrt(size(FRarray,2))))
+end
+
+
+% During rest epochs (epochs individually counted)
+for a = 1:size(brainAreas,2)
+    figure;
+    hold on;
+    title(sprintf("%s Mean Pyr FR Individual Rest Epochs",brainAreas{a}))
+    xlabel("Firing Rate (Hz)")
+    ylabel("Count")
+    
+    FRarray = [];
+    for r = 1:size(C_nrninfo,2)
+    
+        for nrn = 1:size(C_nrninfo{1,r},1)
+
+            S_nrn = C_nrninfo{1,r}{nrn,1};
+
+            if strcmp(S_nrn.area,brainAreas{a})
+                if strcmp(S_nrn.type,"Pyr")
+                    FRarray = [FRarray, S_nrn.eFR(restEpochs)];
+                end
+            end
+    
+        end
+    end
+    histogram(FRarray,5*ceil(sqrt(size(FRarray,2))))
+end
 
 
 
+%% Plot each epoch's FRs separately
+for e = 1:17
+
+    tl = tiledlayout(2,1);
+    tl.Title.String = sprintf("Mean Pyr FR Epoch %d",e);
+    xlabel(tl, "Firing Rate (Hz)")
+    ylabel(tl, "Count")
+
+    for a = 1:size(brainAreas,2)
+
+    
+        FRarray = [];
+        for r = 1:size(C_nrninfo,2)
+        
+            for nrn = 1:size(C_nrninfo{1,r},1)
+    
+                S_nrn = C_nrninfo{1,r}{nrn,1};
+    
+                if strcmp(S_nrn.area,brainAreas{a})
+                    if strcmp(S_nrn.type,"Pyr")
+                        FRarray = [FRarray, S_nrn.eFR(e)];
+                    end
+                end
+        
+            end
+        end
+        nexttile        
+        histogram(FRarray,5*ceil(sqrt(size(FRarray,2))))
+        if strcmp(brainAreas{a},"PFC")
+            xline(3,"--k")
+        elseif strcmp(brainAreas{a},"CA1")
+            xline(1,"--k")
+        end
+        title(brainAreas{a})
+    end
+    pause
+    close all
+end
+
+%% Plot each rat's FRs separately (individually counted epochs) in a 4-tiled
+% plot of behavioral and rest epochs in CA1 and PFC
+brNames = {"Behavior","Rest"};
+brEpochs = {behEpochs, restEpochs};
+for r = 1:size(C_nrninfo,2)
+    tl = tiledlayout(2,2);
+    tl.Title.String = sprintf("Mean Pyr FR Individual Epochs Rat %s",loadRats{r});
+    xlabel(tl, "Firing Rate (Hz)")
+    ylabel(tl, "Count")
+    
+    axes = [];
+    for a = 1:size(brainAreas,2)
+        for br = 1:size(brNames,2)
+        
+            FRarray = [];
+           
+            for nrn = 1:size(C_nrninfo{1,r},1)
+        
+                S_nrn = C_nrninfo{1,r}{nrn,1};
+        
+                if strcmp(S_nrn.area,brainAreas{a})
+                    if strcmp(S_nrn.type,"Pyr")
+                        FRarray = [FRarray, S_nrn.eFR(brEpochs{1,br})];
+                    end
+                end
+        
+            end
+            axes(end+1) = nexttile;        
+            histogram(FRarray,BinWidth=0.15)%size(behEpochs,2)*ceil(sqrt(size(C_nrninfo{1,r},1))))
+            % if strcmp(brainAreas{a},"PFC")
+            %     xline(3,"--k")
+            % elseif strcmp(brainAreas{a},"CA1")
+            %     xline(1,"--k")
+            % end
+            title(sprintf("%s | %s",brNames{br},brainAreas{a}))
+        end
+    end
+    linkaxes(axes,'x')
+    pause
+    close all
+end
+
+%% Plot the probability of choosing the correct arm for each rat over all trials
+
+for r = 1:size(C_allbehper,2)
+    
+    figure;
+    hold on;
+    title(sprintf("Outbound Trial Performance %s",loadRats{r}))
+    ylabel("Probability of Correct Choice")
+    xlabel("Trial")
+    plot(C_allbehper{1,r}.outprobcorrect(:,1),'k')
+    pause
+    close all
 
 
-
-
-
-
-
-
-
-
-
+end
 
 
 
