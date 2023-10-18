@@ -30,7 +30,7 @@ for r = 1:length(loadRats)
         FileDir = dir(dataDir+"/"+loadRats(r)+'_direct'+"/"+shortName+filetypes{ft}+"*");
     
         if isempty(FileDir)
-            error("%s file does not exist for animal: %s \n",filetypes{ft},loadRats{r})
+            error("Cannot find file: %s for animal: %s \n",filetypes{ft},loadRats{r})
         elseif length(FileDir) > 1
             error("More than one file detected when searching for: %s, in animal: %s \n" + ...
                 "Change names in filetypes to be more specific.", filetypes{ft},loadRats{r});

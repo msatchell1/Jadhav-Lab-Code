@@ -105,7 +105,7 @@ C_stillstate = create_stillstate(C_alldata(pos_idx,:));
 C_allstates = [C_allstates; C_runstate; C_stillstate];
 C_allriptimes = C_alldata(rt_idx,:);
 C_alltetinfo = C_alldata(ti_idx,:);
-C_allbehper = C_alldata(behper_idx,:);
+C_behper = C_alldata(behper_idx,:);
 C_nrninfo = C_alldata(nrninfo_idx,:);
 
 behEpochs = 2:2:17;
@@ -355,14 +355,14 @@ end
 
 %% Plot the probability of choosing the correct arm for each rat over all trials
 
-for r = 1:size(C_allbehper,2)
+for r = 1:size(C_behper,2)
     
     figure;
     hold on;
     title(sprintf("Outbound Trial Performance %s",loadRats{r}))
     ylabel("Probability of Correct Choice")
     xlabel("Trial")
-    plot(C_allbehper{1,r}.outprobcorrect(:,1),'k')
+    plot(C_behper{1,r}.outprobcorrect(:,1),'k')
     pause
     close all
 
@@ -379,10 +379,10 @@ for r = 1:size(C_nrninfo,2)
     fracCorr = zeros(1,size(behEpochs,2));
     for be = 1:size(behEpochs,2)
         % 1s and 0s of trials for one epoch
-        isCorrOut = C_allbehper{1,r}.outreward(...
-            C_allbehper{1,r}.dayouttrials(be,1):C_allbehper{1,r}.dayouttrials(be,2));
-        isCorrIn = C_allbehper{1,r}.inreward(...
-            C_allbehper{1,r}.dayintrials(be,1):C_allbehper{1,r}.dayintrials(be,2));
+        isCorrOut = C_behper{1,r}.outreward(...
+            C_behper{1,r}.dayouttrials(be,1):C_behper{1,r}.dayouttrials(be,2));
+        isCorrIn = C_behper{1,r}.inreward(...
+            C_behper{1,r}.dayintrials(be,1):C_behper{1,r}.dayintrials(be,2));
 
         isCorr = [isCorrOut; isCorrIn]; % Combine out and in trials for that epoch
         fracCorr(1,be) = sum(isCorr)/size(isCorr,1); % Calculate fraction of correct trials
@@ -421,6 +421,42 @@ end
 %% To look for trends across all PFC cells I could normalize FRs to 1 for
 % each cell and then average across cells for each rat independently
 
+for r = 1:size(C_nrninfo,2)
+
+    normFRs = NaN(size(C_nrninfo{1,r},1),17);
+
+    for nrn = 1:size(C_nrninfo{1,r},1)
+        S_nrn = C_nrninfo{1,r}{nrn,1};
+        if strcmp(S_nrn.area,"PFC")
+
+            normFRs(nrn,:) = S_nrn.eFR./max(S_nrn.eFR);
+
+        end
+    end
+
+    % Calc mean FR across neurons and SEM.
+    eSEM = std(normFRs,0,1,'omitnan')./sqrt(sum(~isnan(normFRs),1));
+    eMeanFRs = mean(normFRs,1,'omitnan');
+
+    f = figure;
+    title(sprintf("%s Average PFC Normalized FR", loadRats{r}))
+    
+    xlabel("Epoch")
+    colororder({'b','k'})
+
+    yyaxis left
+    hold on
+    shadedErrorBar(1:17,eMeanFRs,eSEM,'lineprops','b')
+    ylabel("Fraction of Max FR")
+    yyaxis right
+    plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
+    ylabel("Fraction of Correct Trials")
+
+    pause
+    close all
+
+
+end
 
 
 
