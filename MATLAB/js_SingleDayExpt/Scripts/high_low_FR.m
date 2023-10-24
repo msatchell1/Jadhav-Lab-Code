@@ -374,26 +374,14 @@ end
 % how cells vary firing behavior across time. Also plot probability of
 % correct choice
 
-for r = 1:size(C_nrninfo,2)
-    % Calculate performance by epoch
-    fracCorr = zeros(1,size(behEpochs,2));
-    for be = 1:size(behEpochs,2)
-        % 1s and 0s of trials for one epoch
-        isCorrOut = C_behper{1,r}.outreward(...
-            C_behper{1,r}.dayouttrials(be,1):C_behper{1,r}.dayouttrials(be,2));
-        isCorrIn = C_behper{1,r}.inreward(...
-            C_behper{1,r}.dayintrials(be,1):C_behper{1,r}.dayintrials(be,2));
-
-        isCorr = [isCorrOut; isCorrIn]; % Combine out and in trials for that epoch
-        fracCorr(1,be) = sum(isCorr)/size(isCorr,1); % Calculate fraction of correct trials
-    end
-
+for r = 2:size(C_nrninfo,2)
 
     for nrn = 1:size(C_nrninfo{1,r},1)
         S_nrn = C_nrninfo{1,r}{nrn,1};
         if strcmp(S_nrn.area,"PFC")
+            LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
             f = figure;
-            title(sprintf("%s PFC Neuron %d \n %s", loadRats{r},S_nrn.ID,S_nrn.type))
+            title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,LMRV))
             
             xlabel("Epoch")
             colororder({'b','k'})
@@ -404,7 +392,7 @@ for r = 1:size(C_nrninfo,2)
             plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
             ylabel("Mean Firing Rate (Hz)")
             yyaxis right
-            plot(behEpochs,fracCorr,'k')
+            plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
             ylabel("Fraction of Correct Trials")
 
             legend(["nrn FR","sum isPC","frac corr"],Location="Best")
