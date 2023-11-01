@@ -370,34 +370,40 @@ for r = 1:size(C_behper,2)
 end
 
 
-%% Plot the FR of each PFC cell over time. I am doing this to get an idea of 
+%% Plot LMRV with the FR of each PFC cell over time. I am doing this to get an idea of 
 % how cells vary firing behavior across time. Also plot probability of
 % correct choice
 
-for r = 2:size(C_nrninfo,2)
+LMRV_thr = -1; % threshold for plotting cells.
+
+for r = 1:size(C_nrninfo,2)
 
     for nrn = 1:size(C_nrninfo{1,r},1)
         S_nrn = C_nrninfo{1,r}{nrn,1};
         if strcmp(S_nrn.area,"PFC")
             LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
-            f = figure;
-            title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,LMRV))
+            C_nrninfo{1,r}{nrn,1}.LMRV = LMRV; % Assign LMRV to struct
             
-            xlabel("Epoch")
-            colororder({'b','k'})
-
-            yyaxis left
-            hold on
-            plot(1:17,S_nrn.eFR,'*-')
-            plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
-            ylabel("Mean Firing Rate (Hz)")
-            yyaxis right
-            plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
-            ylabel("Fraction of Correct Trials")
-
-            legend(["nrn FR","sum isPC","frac corr"],Location="Best")
-            pause
-            close all
+            if LMRV >= LMRV_thr
+                f = figure;
+                title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,LMRV))
+                
+                xlabel("Epoch")
+                colororder({'b','k'})
+    
+                yyaxis left
+                hold on
+                plot(1:17,S_nrn.eFR,'*-')
+                plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
+                ylabel("Mean Firing Rate (Hz)")
+                yyaxis right
+                plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
+                ylabel("Fraction of Correct Trials")
+    
+                legend(["nrn FR","sum isPC","frac corr"],Location="Best")
+                pause
+                close all
+            end
         end
 
     end

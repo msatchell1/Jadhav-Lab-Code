@@ -20,7 +20,7 @@ function [LMRV] = calc_LMRV(ePerf,eFR)
 % ePerf = [0.481481481481481	0.769230769230769	0.866666666666667	0.870370370370370	0.933333333333333	0.806451612903226	0.842105263157895	0.758620689655172];
 
 
-eFR = eFR(2:end-1); % Removes first and last epoch.
+% eFR = eFR(2:end-1); % Removes first and last epoch.
 eFR = eFR/max(eFR); % Normalize to 1 to eliminate differences between high and low FR neurons.
 
 if any(isnan(eFR))
@@ -46,17 +46,29 @@ else
     
     % Getting change in rates
     eCR = diff(eFR);
-    % And the sum of adjacent rates to normalize the difference by
-    eSR = eFR(1:end-1) + eFR(2:end);
+    
+    eCR(eCR<0) = 0;
+
+    % The absolute value in the change of rates is what matters
+    % eCR = abs(eCR);
+    
+    % Also, normalize change in rates to 1 to prevent high-FR and low-FR
+    % neurons from being different.
+    % eCR = eCR/max(eCR);
+
+    % % And the sum of adjacent rates to normalize the difference by
+    % eSR = eFR(1:end-1) + eFR(2:end);
+
+    % To make the dp vector equal in length to the dr vector, simply extend
+    % the end of the dp vector using the end values.
+    ePSlope = [ePSlope(1,1), ePSlope, ePSlope(1,end)];
 
     % Negative slopes have no meaning, so these are set to zero to avoid
     % the correlation being affected by them.
     ePSlope(ePSlope<0) = 0;
-    % The absolute value in the change of rates is what matters
-    eCR = abs(eCR);
-    % Also, normalize change in rates to 1 to prevent high-FR and low-FR
-    % neurons from being different.
-    % eCR = eCR/max(eCR);
+
+    % Now normalize slopes to 1 to make the LMRV index simpler.
+    ePSlope = ePSlope/max(ePSlope);
     
     
     
@@ -67,7 +79,7 @@ else
         S = ePSlope(i); % Change in performance at epoch. Is greater than or equal to zero.
         dr = eCR(i); % Change in firing rate at epoch.
 
-        temp = dr^2 * ((S/Smax)^0.1 + (S-Smax)/(S+Smax)); 
+        temp = dr^2 * ((S/Smax)^0.1 + ((S-Smax)/(S+Smax))); 
         LMRVsum = LMRVsum + temp;
     end
 
@@ -76,12 +88,30 @@ else
      
 
     % figure;
-    % hold on;
-    % % plot(2:2:2*length(eSlope)+1,eSlope)
-    % plot(2:length(intrSlope)+1,intrSlope)
-    % plot(2:2:2*length(ePerf), ePerf)
-    % plot(2:length(eSCR)+1,eSCR/max(eSCR))
-    % % plot(2:length(eFR)+1, eFR)
+    % 
+    % tl = tiledlayout(1,2);
+    % nexttile
+    % plot(eFR)
+    % hold on
+    % plot(1.5:length(eCR)+0.5,eCR)
+    % legend("eFR","eCR >= 0",Location="best")
+    % title("Firing Rate")
+    % 
+    % nexttile
+    % plot(2:2:2*length(ePerf),ePerf)
+    % hold on
+    % plot(1.5:length(ePSlope)+0.5,ePSlope)
+    % legend("ePerf","ePSlope >= 0",Location="best")
+    % title("Performance")
+    % 
+    % title(tl,sprintf("LMRV = %.2f",LMRV))
+
+    figure;
+    plot(1.5:length(eCR)+0.5,eCR/max(eCR))
+    hold on
+    plot(1.5:length(ePSlope)+0.5,ePSlope/max(ePSlope))
+    legend("dr","dp")
+    title("dr and dp Normalized to 1")
     
     
 
