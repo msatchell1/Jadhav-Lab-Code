@@ -450,14 +450,14 @@ end
 
 %% Calculate and plot correlation between change in FR and change in performance
 
-for r = 1:size(C_nrninfo,2)
+for r = 2:size(C_nrninfo,2)
 
     for nrn = 1:size(C_nrninfo{1,r},1)
         S_nrn = C_nrninfo{1,r}{nrn,1};
         if strcmp(S_nrn.area,"PFC")
-            corrVal = dr_dp_corr(C_behper{1,r}.eFracCorr,S_nrn.eFR);
+            corrVa = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
             f = figure;
-            title(sprintf("%s PFC Neuron %d \n %s | corr = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,corrVal))
+            title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,LMRV))
             
             xlabel("Epoch")
             colororder({'b','k'})

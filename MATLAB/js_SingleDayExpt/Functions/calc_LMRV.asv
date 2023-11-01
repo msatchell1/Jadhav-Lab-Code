@@ -21,10 +21,9 @@ function [LMRV] = calc_LMRV(ePerf,eFR)
 
 
 eFR = eFR(2:end-1); % Removes first and last epoch.
-eFR = eFR/max(eFR); % Normalize to 1 to eliminate differences between high and low FR neurons.
 
 if any(isnan(eFR))
-    %fprintf("Warning: NaN values exist in firing rate vector. LMRV cannot be calculated. \n")
+    fprintf("Warning: NaN values exist in firing rate vector. LMRV cannot be calculated. \n")
     LMRV = NaN;
 else
 
@@ -54,9 +53,7 @@ else
     ePSlope(ePSlope<0) = 0;
     % The absolute value in the change of rates is what matters
     eCR = abs(eCR);
-    % Also, normalize change in rates to 1 to prevent high-FR and low-FR
-    % neurons from being different.
-    % eCR = eCR/max(eCR);
+    % Also, normalize change in rates to 1 to prevent high-FR and low
     
     
     
@@ -67,11 +64,11 @@ else
         S = ePSlope(i); % Change in performance at epoch. Is greater than or equal to zero.
         dr = eCR(i); % Change in firing rate at epoch.
 
-        temp = dr^2 * ((S/Smax)^0.1 + (S-Smax)/(S+Smax)); 
+        temp = (dr/eSR(i))^3 * ((S/Smax)^0.1 + (S-Smax)/(S+Smax)); 
         LMRVsum = LMRVsum + temp;
     end
 
-    LMRV = LMRVsum/(sum(eCR.^2)); % Normalize to a max of 1.
+    LMRV = LMRVsum/(sum((eCR./eSR).^3)); % Normalize to a max of 1.
 
      
 
