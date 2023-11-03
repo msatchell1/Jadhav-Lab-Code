@@ -46,7 +46,7 @@ else
     
     % Getting change in rates
     eCR = diff(eFR);
-    
+
     eCR(eCR<0) = 0;
 
     % The absolute value in the change of rates is what matters
@@ -106,12 +106,12 @@ else
     % 
     % title(tl,sprintf("LMRV = %.2f",LMRV))
 
-    figure;
-    plot(1.5:length(eCR)+0.5,eCR/max(eCR))
-    hold on
-    plot(1.5:length(ePSlope)+0.5,ePSlope/max(ePSlope))
-    legend("dr","dp")
-    title("dr and dp Normalized to 1")
+    % figure;
+    % plot(1.5:length(eCR)+0.5,eCR/max(eCR))
+    % hold on
+    % plot(1.5:length(ePSlope)+0.5,ePSlope/max(ePSlope))
+    % legend("dr","dp")
+    % title("dr and dp Normalized to 1")
     
     
 
