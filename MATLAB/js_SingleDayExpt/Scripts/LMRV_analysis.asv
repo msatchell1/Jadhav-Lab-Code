@@ -166,5 +166,3 @@ end
 
 
 %% 
-
-create_combinedStates(C_allstates,stateNames,dataDir)
