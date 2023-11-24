@@ -1,5 +1,5 @@
-function [] = create_combinedStates(statesMat,stateNames,dataDir)
-%CREATE_COMBINEDSTATES Concatenates states and labels them.
+function [C_combStates] = create_combStates(statesMat,stateNames,dataDir)
+%CREATE_COMBSTATES Concatenates states and labels them.
 %   Combines physiological states for multiple animals in temporal order.
 %   Each epoch is handled separately. Also saves a file combinedStates.mat
 %   to each animal's folder under the parent directory dataDir.
@@ -18,7 +18,7 @@ function [] = create_combinedStates(statesMat,stateNames,dataDir)
 %   
 % Outputs:
 %
-%   S_combinedStates - a (num animals) x (num epochs) cell array, each
+%   C_combStates - a (num animals) x (num epochs) cell array, each
 %   element being a struct containing the concatenated and labeled states.
 
 
@@ -42,7 +42,7 @@ function [] = create_combinedStates(statesMat,stateNames,dataDir)
 % end
 
 
-S_combinedStates = cell(size(statesMat,2),size(size(statesMat{1,1},2)));
+C_combStates = cell(size(statesMat,2),size(statesMat{1,1},2));
 
 
 % Loop to concatenate the state times
@@ -78,11 +78,13 @@ for r = 1:size(statesMat,2)
 
         S_epoch.ratID = r;
         S_epoch.epoch = e;
-        S_epoch.stateNames = stateNames;
+        S_epoch.stateNames = stateNames';
         S_epoch.sepData = startEndMat(:,e); % State data seperated
         S_epoch.combSortData = sortedOccs; 
-        S_epoch.dataDscrp = "Data is sorted into 3 columns. Col 1 = start time"
-
+        S_epoch.dataDscrp = "Data is sorted into 3 columns. Col 1 = start time (s)," + ...
+            " Col 2 = end time, and Col 3 is the index to stateNames.";
+        
+        C_combStates{r,e} = S_epoch;
 
     end
 

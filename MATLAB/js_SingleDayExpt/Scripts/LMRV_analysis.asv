@@ -31,7 +31,7 @@ C_alldata = load_data(dataDir,loadRats,filetypes); % Load data to struct
 % C_allstates or later FR_allStates. Thus, stateFiles MUST MATCH ORDER
 % THESE FILES ARE LISTED IN filetypes.
 stateFiles = {'sws','rem','ripple'};
-stateNames = {'sws','rem','ripple','run','still'}; % Must match order states
+stateNames = {'SWS','REM','ripple','run','still'}; % Must match order states
 % are added to C_allstates
 % ------------------------------------------
 % ------------------------------------------
@@ -107,6 +107,7 @@ C_allriptimes = C_alldata(rt_idx,:);
 C_alltetinfo = C_alldata(ti_idx,:);
 C_behper = C_alldata(behper_idx,:);
 C_nrninfo = C_alldata(nrninfo_idx,:);
+C_pos = C_alldata(pos_idx,:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -165,4 +166,62 @@ end
 % end
 
 
-%% 
+%% Get sorted occurances of all states
+
+C_combStates = create_combStates(C_allstates,stateNames,dataDir);
+
+%% Plot some example epochs
+
+stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
+
+r = 1;
+for e = 1:size(C_combStates,2)
+
+    velData = C_pos{1,r}{1,e}.data(:,5);
+    timeData = C_pos{1,r}{1,e}.data(:,1);
+    velData = sgolayfilt(velData, 2, 31); % Smooth velocity
+
+    S_occ = C_combStates{r,e};
+    occs = S_occ.combSortData; % Occurances of all states in temporal order.
+
+    % Get PFC pyramidal neurons
+    nrns = [];
+    for n = 1:size(C_nrninfo{1,r},1)
+        S_nrn = (C_nrninfo{1,r}{n,1});
+        if strcmp(S_nrn.area,"PFC") && strcmp(S_nrn.type,"Pyr") && ...
+                S_nrn.eHasSpikeData(1,e)
+            nrns = [nrns; S_nrn];
+        end
+    end
+
+    allSpikes = []; % Put all spikes into one vector
+    for n = 1:size(nrns,1)
+        allSpikes = [allSpikes; nrns(n).eSpikeData{e}(:,1)];
+    end
+    allSpikes = sort(allSpikes);
+    
+    winLen = 0.1; % window of time to average over for the firing rate
+    FRtimes = nrns(1).eTimeRange{1,e}(1,1) : winLen : nrns(1).eTimeRange{1,e}(1,2);
+    
+    FRavg = sum(allSpikes FRtimes
+
+    figure;
+    hold on
+    % plot(timeData,velData,'k')
+
+    for i = 1:size(occs,1)
+        x_vertices = [occs(i,1),occs(i,2),occs(i,2),occs(i,1)];
+        y_vertices = [min(velData),min(velData),max(velData),max(velData)];
+        patch(x_vertices, y_vertices, stateColors(occs(i,3),:),'FaceAlpha', 0.3, 'EdgeColor','none')
+    
+        % if i == 1
+        %     runLabels{i} = "run times";
+        % else
+        %     runLabels{i} = "";
+        % end
+    end
+    
+    
+    pause
+    close all
+end
