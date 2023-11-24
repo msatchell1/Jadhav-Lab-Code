@@ -124,14 +124,31 @@ for r = 1:size(C_nrninfo,2)
         S_nrn = C_nrninfo{1,r}{nrn,1};
         LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
         C_nrninfo{1,r}{nrn,1}.LMRV = LMRV; % Assign LMRV to struct
+        
+        LMRV_thr = 0.5; % threshold for a cell to be learning modulated.
+        C_nrninfo{1,r}{nrn,1}.LMRVthreshold = LMRV_thr;
+        
+        if LMRV >= LMRV_thr
+            % Determine if neuron fires more during wake or sleep
+            % epochs
+            if sum(S_nrn.eFR(restEpochs))/length(restEpochs) >= ...
+                    sum(S_nrn.eFR(behEpochs))/length(behEpochs)
+                C_nrninfo{1,r}{nrn,1}.LMRVtype = "rest-LMRV";
+            elseif sum(S_nrn.eFR(restEpochs))/length(restEpochs) < ...
+                    sum(S_nrn.eFR(behEpochs))/length(behEpochs)
+                C_nrninfo{1,r}{nrn,1}.LMRVtype = "beh-LMRV";
+            end
+        else
+            C_nrninfo{1,r}{nrn,1}.LMRVtype = "non-LMRV";
+        end
+
+
     end
 end
 
 %% Plot LMRV with the FR of each PFC cell over time. I am doing this to get an idea of 
 % how cells vary firing behavior across time. Also plot probability of
 % correct choice
-
-% LMRV_thr = 0.6; % threshold for plotting cells.
 % 
 % for r = 1:size(C_nrninfo,2)
 % 
@@ -139,26 +156,26 @@ end
 %         S_nrn = C_nrninfo{1,r}{nrn,1};
 % 
 %         if strcmp(S_nrn.area,"PFC")
-%             if S_nrn.LMRV >= LMRV_thr
-%                 f = figure;
-%                 title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f", loadRats{r},S_nrn.ID,S_nrn.type,S_nrn.LMRV))
+%             f = figure;
+%             title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f, type = %s", ...
+%                 loadRats{r},S_nrn.ID,S_nrn.type,S_nrn.LMRV,S_nrn.LMRVtype))
 % 
-%                 xlabel("Epoch")
-%                 colororder({'b','k'})
+%             xlabel("Epoch")
+%             colororder({'b','k'})
 % 
-%                 yyaxis left
-%                 hold on
-%                 plot(1:17,S_nrn.eFR,'*-')
-%                 plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
-%                 ylabel("Mean Firing Rate (Hz)")
-%                 yyaxis right
-%                 plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
-%                 ylabel("Fraction of Correct Trials")
+%             yyaxis left
+%             hold on
+%             plot(1:17,S_nrn.eFR,'*-')
+%             plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
+%             ylabel("Mean Firing Rate (Hz)")
+%             yyaxis right
+%             plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
+%             ylabel("Fraction of Correct Trials")
 % 
-%                 legend(["nrn FR","sum isPC","frac corr"],Location="Best")
-%                 pause
-%                 close all
-%             end
+%             legend(["nrn FR","sum isPC","frac corr"],Location="Best")
+%             pause
+%             close all
+% 
 %         end
 % 
 %     end
@@ -184,42 +201,78 @@ for e = 1:size(C_combStates,2)
     S_occ = C_combStates{r,e};
     occs = S_occ.combSortData; % Occurances of all states in temporal order.
 
-    % Get PFC pyramidal neurons
+    % Get PFC pyramidal neurons and sort into LMRV and non-LMRV
+    nonLMRV = [];
+    restLMRV = [];
+    behLMRV = [];
     nrns = [];
     for n = 1:size(C_nrninfo{1,r},1)
         S_nrn = (C_nrninfo{1,r}{n,1});
         if strcmp(S_nrn.area,"PFC") && strcmp(S_nrn.type,"Pyr") && ...
                 S_nrn.eHasSpikeData(1,e)
-            nrns = [nrns; S_nrn];
+
+            if strcmp(S_nrn.LMRVtype,"rest-LMRV")
+                restLMRV = [restLMRV; S_nrn];
+            elseif strcmp(S_nrn.LMRVtype,"beh-LMRV")
+                behLMRV = [behLMRV; S_nrn];
+            elseif strcmp(S_nrn.LMRVtype,"non-LMRV")
+                nonLMRV = [nonLMRV; S_nrn];
+            end
         end
     end
 
-    allSpikes = []; % Put all spikes into one vector
-    for n = 1:size(nrns,1)
-        allSpikes = [allSpikes; nrns(n).eSpikeData{e}(:,1)];
+
+    nonLMRVspikes = []; % Put all spikes into one vector
+    for n = 1:size(nonLMRV,1)
+        nonLMRVspikes = [nonLMRVspikes; nonLMRV(n).eSpikeData{e}(:,1)];
     end
-    allSpikes = sort(allSpikes);
+    nonLMRVspikes = sort(nonLMRVspikes);
+
+    restLMRVspikes = [];
+    for n = 1:size(restLMRV,1)
+        restLMRVspikes = [restLMRVspikes; restLMRV(n).eSpikeData{e}(:,1)];
+    end
+    restLMRVspikes = sort(restLMRVspikes);
+
+    behLMRVspikes = [];
+    for n = 1:size(behLMRV,1)
+        behLMRVspikes = [behLMRVspikes; behLMRV(n).eSpikeData{e}(:,1)];
+    end
+    behLMRVspikes = sort(behLMRVspikes);
+
     
-    winLen = 0.1; % window of time to average over for the firing rate
-    FRtimes = nrns(1).eTimeRange{1,e}(1,1) : winLen : nrns(1).eTimeRange{1,e}(1,2);
+    winLen = 0.5; % window of time to average over for the firing rate (s).
+    FRtimes = nonLMRV(1).eTimeRange{1,e}(1,1) : winLen : nonLMRV(1).eTimeRange{1,e}(1,2);
     
-    FRavg = [];
+    nonFRavg = [];
+    restFRavg = [];
+    behFRavg = [];
     for i = 1:length(FRtimes)
-        FRavg(i) = sum( allSpikes >= (FRtimes(i)-winLen/2) & ...
-            allSpikes <= (FRtimes(i)+winLen/2) )/(length(nrns)*winLen); % Counts the number of spikes
+        nonFRavg(i) = sum( nonLMRVspikes >= (FRtimes(i)-winLen/2) & ...
+            nonLMRVspikes <= (FRtimes(i)+winLen/2) )/(length(nonLMRV)*winLen); % Counts the number of spikes
         % within winLen/2 on either side of each time point.
+
+        restFRavg(i) = sum( restLMRVspikes >= (FRtimes(i)-winLen/2) & ...
+            restLMRVspikes <= (FRtimes(i)+winLen/2) )/(length(restLMRV)*winLen);
+
+        behFRavg(i) = sum( behLMRVspikes >= (FRtimes(i)-winLen/2) & ...
+            behLMRVspikes <= (FRtimes(i)+winLen/2) )/(length(behLMRV)*winLen);
     end
 
     figure;
     hold on
     % plot(timeData,velData,'k')
-    plot(FRtimes,FRavg,'k','DisplayName',"avg PFC Pyr FR")
+    plot(FRtimes,nonFRavg,'k','DisplayName',"nonLMRV FR")
+    plot(FRtimes,restFRavg,'r','DisplayName',"restLMRV FR")
+    plot(FRtimes,behFRavg,'b','DisplayName',"behLMRV FR")
     xlabel("Time (s)")
     ylabel("Firing Rate (Hz)")
+    title(sprintf("%s epoch %d",loadRats{r},e))
 
     for i = 1:size(occs,1)
         x_vertices = [occs(i,1),occs(i,2),occs(i,2),occs(i,1)];
-        y_vertices = [min(FRavg),min(FRavg),max(FRavg),max(FRavg)];
+        y_vertices = [min([restFRavg,behFRavg]),min([restFRavg,behFRavg]), ...
+            max([restFRavg,behFRavg]),max([restFRavg,behFRavg])];
         patch(x_vertices, y_vertices, stateColors(occs(i,3),:),'FaceAlpha', 0.3, 'EdgeColor','none'...
             ,'HandleVisibility','off')
     
