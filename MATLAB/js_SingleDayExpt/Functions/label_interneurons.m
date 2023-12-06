@@ -4,6 +4,7 @@ function [] = label_interneurons(dataDir,loadRats)
 %   waveforms for all neurons of that rat and labels ineterneurons based on
 %   spike width and mean firing rate across all epochs. Saves this
 %   information to the spikes01 file.
+%   NOTE: Assumes 30,000 Hz sampling rate.
 
 
 % This is how Shantanu, Frank 2016 sorted out interneurons:
@@ -49,9 +50,9 @@ C_allspikes = C_alldata(spikes_idx,:);
 
 % Edit to folder of matclust files for each rat. Name of each subfolder
 % should be '*Rat name*.matclust'
-matclustDataDir = dataDir + '/matclust files';
+matclustDataDir = append(dataDir, '/matclust files');
 
-
+fprintf("Labeling interneurons... \n \n")
 for r = 1:size(loadRats,2)
     fprintf("Processing matclust data for %s \n",loadRats{1,r})
     

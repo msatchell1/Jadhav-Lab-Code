@@ -7,6 +7,14 @@ function [] = create_nrninfo_MES(dataDir,loadRats)
 % array (tot num neurons) x 1. Each cell contains a struct with that neuron's
 % information.
 
+
+%% Assign cell type in the spikes files for each rat, because this is used later.
+% Only run this if the structs in spikes01.mat files don't seem to have the
+% nrnType field. Cells will have an empty "type" field in nrninfo_MES if
+% the nrnType field is missing from spikes01.mat.
+% label_interneurons(dataDir,loadRats);
+
+%% Load data
 filetypes = {'spikes01','behavperform'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes);
@@ -26,10 +34,12 @@ C_behper = C_alldata(behper_idx,:);
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
 
+
+
 %% Meat and potatoes
 
 
-
+fprintf("Creating nrninfo_MES files... \n \n")
 for r = 1:size(loadRats,2)
 
     nrninfo_MES = cell(1,1);
@@ -52,6 +62,10 @@ for r = 1:size(loadRats,2)
     epochTrajCoverage = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
     epochTrajPeaks = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
     epochTrajIsPC = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
+
+    areaExist = ones(size([C_allspikes{1,r}{1,1}{:}],2),1); 
+    typeExist = ones(size([C_allspikes{1,r}{1,1}{:}],2),1); % Variables to catch any animals where at least
+    % one cell doesn't have a given struct field.
 
     for e = 1:size(C_allspikes{1,r},2) % I want to loop through every epoch to 
         % get the data that I need (like which epochs a neuron is clustered
@@ -117,6 +131,7 @@ for r = 1:size(loadRats,2)
             S_nrn.area = nonemptyAreas(1);
         else
             S_nrn.area = "";
+            areaExist(nrn) = 0;
         end
         
         % Same thing for neuron type
@@ -126,6 +141,7 @@ for r = 1:size(loadRats,2)
             S_nrn.type = nonemptyTypes(1);
         else
             S_nrn.type = "";
+            typeExist(nrn) = 0;
         end
 
         % By taking the mean I will know when there is a problem if a
@@ -185,9 +201,19 @@ for r = 1:size(loadRats,2)
 
     end
 
+    % NOTE: text must be char vectors, not string, or an "invalid file
+    % identifier" error occurs.
+    if any(~areaExist)
+        fmt = ['%s cells with empty "area" field:',repmat(' %i',1,numel(find(~areaExist))),'\n'];
+        fprintf(fmt,loadRats{r},find(~areaExist))
+    end
+    if any(~typeExist)
+        fmt = ['%s cells with empty "type" field:',repmat(' %i',1,numel(find(~typeExist))),'\n'];
+        fprintf(fmt,loadRats{r},find(~typeExist))
+    end
+
 
     % Save data from each rat
-
     short_name = loadRats{r};
     chop_idx = strfind(loadRats{r},'_') - 1;
     if ~isempty(chop_idx)
