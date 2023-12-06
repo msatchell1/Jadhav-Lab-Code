@@ -7,7 +7,7 @@ function [] = create_nrninfo_MES(dataDir,loadRats)
 % array (tot num neurons) x 1. Each cell contains a struct with that neuron's
 % information.
 
-filetypes = {'spikes01'};
+filetypes = {'spikes01','behavperform'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes);
 
@@ -15,10 +15,16 @@ spikes_idx = find(contains(filetypes,'spikes01'));
 if isempty(spikes_idx)
     error("spikes01 data must be loaded to run this analysis.")
 end
+behper_idx = find(contains(filetypes,'behavperform'));
+if isempty(behper_idx)
+    error("behavperform data must be loaded to run this analysis.")
+end
 
 C_allspikes = C_alldata(spikes_idx,:);
+C_behper = C_alldata(behper_idx,:);
 
-
+behEpochs = 2:2:17;
+restEpochs = 1:2:17;
 
 %% Meat and potatoes
 
@@ -153,7 +159,30 @@ for r = 1:size(loadRats,2)
         S_nrn.eTrajFRPeak = epochTrajPeaks(nrn,:);
 
 
+        % Calculate LMRV value and add to nrn struct
+        LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
+        LMRV_thr = 0.5; % threshold for a cell to be learning modulated.
+        S_nrn.LMRV = LMRV; % Assign LMRV to struct
+        S_nrn.LMRVthreshold = LMRV_thr;
+        if LMRV >= LMRV_thr
+            % Determine if neuron fires more during wake or sleep
+            % epochs
+            if sum(S_nrn.eFR(restEpochs))/length(restEpochs) >= ...
+                    sum(S_nrn.eFR(behEpochs))/length(behEpochs)
+                S_nrn.LMRVtype = "rest-LMRV";
+            elseif sum(S_nrn.eFR(restEpochs))/length(restEpochs) < ...
+                    sum(S_nrn.eFR(behEpochs))/length(behEpochs)
+                S_nrn.LMRVtype = "beh-LMRV";
+            end
+        else
+            S_nrn.LMRVtype = "non-LMRV";
+        end
+        
+
+
+
         nrninfo_MES{1,1}{nrn,1} = S_nrn; % Store with other cells
+
     end
 
 

@@ -1,5 +1,5 @@
-function [] = create_combinedStates(statesMat,stateNames,dataDir)
-%CREATE_COMBINEDSTATES Concatenates states and labels them.
+function [] = create_combstates(statesMat,stateNames,dataDir,loadRats)
+%CREATE_COMBSTATES Concatenates states and labels them.
 %   Combines physiological states for multiple animals in temporal order.
 %   Each epoch is handled separately. Also saves a file combinedStates.mat
 %   to each animal's folder under the parent directory dataDir.
@@ -18,7 +18,7 @@ function [] = create_combinedStates(statesMat,stateNames,dataDir)
 %   
 % Outputs:
 %
-%   S_combinedStates - a (num animals) x (num epochs) cell array, each
+%   C_combstates - a (num animals) x (num epochs) cell array, each
 %   element being a struct containing the concatenated and labeled states.
 
 
@@ -42,11 +42,13 @@ function [] = create_combinedStates(statesMat,stateNames,dataDir)
 % end
 
 
-S_combinedStates = cell(size(statesMat,2),size(size(statesMat{1,1},2)));
+%C_combstates = cell(size(statesMat,2),size(statesMat{1,1},2));
 
 
 % Loop to concatenate the state times
 for r = 1:size(statesMat,2)
+
+    C_combstates = cell(1,1);
     
     % Cell matrix (states) x (epochs) with the list of starttimes (col 1)
     % endtimes (col 2) and state index (col 3) within.
@@ -78,20 +80,32 @@ for r = 1:size(statesMat,2)
 
         S_epoch.ratID = r;
         S_epoch.epoch = e;
-        S_epoch.stateNames = stateNames;
+        S_epoch.stateNames = stateNames';
         S_epoch.sepData = startEndMat(:,e); % State data seperated
         S_epoch.combSortData = sortedOccs; 
-        S_epoch.dataDscrp = "Data is sorted into 3 columns. Col 1 = start time"
-
+        S_epoch.dataDscrp = "Data is sorted into 3 columns. Col 1 = start time (s)," + ...
+            " Col 2 = end time, and Col 3 is the index to stateNames.";
+        
+        C_combstates{1,1}{1,e} = S_epoch;
 
     end
 
     
 
+    % Save data from each rat
+    short_name = loadRats{r};
+    chop_idx = strfind(loadRats{r},'_') - 1;
+    if ~isempty(chop_idx)
+        short_name = loadRats{r}(1:chop_idx); % Gets the first characters of the rat's name before an '_'.
+        % So far this is only needed for ER1_NEW to remove the '_NEW'.
+    end
+
+    save(string(fullfile(dataDir,sprintf("%s_direct/%scombstates_MES.mat",loadRats{r},short_name))),"C_combstates", '-v7.3')
+    fprintf("Saved file: %scombstates_MES \n",short_name)
     
-
-
 end
+
+fprintf("Finished creating combstates_MES files. \n")
 
 
 end

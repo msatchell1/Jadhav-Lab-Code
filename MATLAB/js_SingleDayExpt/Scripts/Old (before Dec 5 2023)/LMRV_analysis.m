@@ -183,9 +183,6 @@ end
 % end
 
 
-%% Get sorted occurances of all states
-
-C_combStates = create_combStates(C_allstates,stateNames,dataDir);
 
 %% Plot some example epochs
 
@@ -223,8 +220,8 @@ for e = 1:size(C_combStates,2)
 
 
     nonLMRVspikes = []; % Put all spikes into one vector
-    for n = 1:size(nrns,1)
-        nonLMRVspikes = [nonLMRVspikes; nrns(n).eSpikeData{e}(:,1)];
+    for n = 1:size(nonLMRV,1)
+        nonLMRVspikes = [nonLMRVspikes; nonLMRV(n).eSpikeData{e}(:,1)];
     end
     nonLMRVspikes = sort(nonLMRVspikes);
 
@@ -241,8 +238,8 @@ for e = 1:size(C_combStates,2)
     behLMRVspikes = sort(behLMRVspikes);
 
     
-    winLen = 0.1; % window of time to average over for the firing rate (s).
-    FRtimes = nonLMRV(1).eTimeRange{1,e}(1,1) : winLen : nrns(1).eTimeRange{1,e}(1,2);
+    winLen = 0.5; % window of time to average over for the firing rate (s).
+    FRtimes = nonLMRV(1).eTimeRange{1,e}(1,1) : winLen : nonLMRV(1).eTimeRange{1,e}(1,2);
     
     nonFRavg = [];
     restFRavg = [];
@@ -271,7 +268,8 @@ for e = 1:size(C_combStates,2)
 
     for i = 1:size(occs,1)
         x_vertices = [occs(i,1),occs(i,2),occs(i,2),occs(i,1)];
-        y_vertices = [min(nonFRavg),min(nonFRavg),max(nonFRavg),max(nonFRavg)];
+        y_vertices = [min([restFRavg,behFRavg]),min([restFRavg,behFRavg]), ...
+            max([restFRavg,behFRavg]),max([restFRavg,behFRavg])];
         patch(x_vertices, y_vertices, stateColors(occs(i,3),:),'FaceAlpha', 0.3, 'EdgeColor','none'...
             ,'HandleVisibility','off')
     
