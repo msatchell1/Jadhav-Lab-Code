@@ -50,45 +50,76 @@ brainAreas = {'CA1','PFC'};
 
 %% Split spikes up depending on the state they occur during
 
-for r = 1:size(C_nrninfo,2)
 
-    for e = 1:size(C_combstates{1,r},2)
-        
-        % combOccs = C_combstates{1,r}{1,e}.combSortData;
-        stateNames = C_combstates{1,r}{1,e}.stateNames;
 
-        % The index number into stateNames of which states exist for this
-        % epoch.
-        stateIdxs = find(~cellfun(@isempty,C_combstates{1,4}{1,4}.sepData));
+for e = 1:size(C_combstates{1,r},2)
+    
+    % All rats and epochs have the same stateNames
+    stateNames = C_combstates{1,1}{1,e}.stateNames;
 
-        tl = tiledlayout(size(stateIdxs,1),size(stateIdxs,1));
-        title(tl, sprintf("%s Epoch %i",r,e))
+    % % The index number into stateNames of which states exist for this
+    % % epoch. Assuming identical across rats.
+    % stateIdxs = find(~cellfun(@isempty,C_combstates{1,1}{1,e}.sepData));
 
-        for s1 = stateIdxs'
-            % Loop through a second set of states to get every combination
-            for s2 = stateIdxs'
+    % Because some rats will have different states (some rats have no REM
+    % in epoch 1), I can't just use rat 1 as a reference for what states
+    % exist. Instead I just include all possible states in each epoch:
+    if mod(e,2) % rest epochs
+        stateIdxs = [1:numel(stateNames)]';
+    else % beh epochs
+        stateIdxs = [3;4;5]; % ripple, run, and still respectively. 
+    end
 
-                s1Occs = C_combstates{1,r}{1,e}.sepData{s1,1};
-                s2Occs = C_combstates{1,r}{1,e}.sepData{s2,1};
-                s1s2Occs = [s1Occs; s2Occs]; % Combine so I can loop easier later.
+    % Create an array to keep track of which state combinations have
+    % been plotted. The number unique pairs is n*(n-1)/2
+    numUnqPrs = numel(stateIdxs)*(numel(stateIdxs)-1)/2;
+    stateHist = [NaN,NaN]; % Can't be empty to use ismember
 
-                nexttile
+    tl = tiledlayout(ceil(numUnqPrs/ceil(sqrt(numUnqPrs))),ceil(sqrt(numUnqPrs)));
+    title(tl, sprintf("Epoch %i all Rats",e))
+    tlaxes = [];
+
+    for s1 = stateIdxs'
+        % Loop through a second set of states to get every combination
+        for s2 = stateIdxs'
+            % Exclude comparing state with self or duplicating
+            % comparisons.
+            if s1 ~= s2 && ~any(ismember(stateHist,[s1,s2 ; s2,s1],'rows'))
+                stateHist = [stateHist; s1,s2]; % record state comparison made.
+
+                tlaxes(end+1) = nexttile;
                 hold on
-                plot([0,40],[0,40],'k')
                 xlabel(sprintf("FR in %s (Hz)",stateNames{s1}))
                 ylabel(sprintf("FR in %s (Hz)",stateNames{s2}))
+                set(gca, 'XScale', 'log', 'YScale', 'log');
+                plot([0.01,40],[0.01,40],'k',HandleVisibility='off')
+                pltcolors = {[152,8,230]/230, [8,52,230]/230};
+
                 % It's important to note that neurons in nrninfo_MES
                 % without an area field also have no spike data in any
                 % epochs. There are actually quite a few cells like this in
                 % every rat.
-                for n = 1:size(C_nrninfo{1,r},1)
+                FRs = [];
+                areas = [];
+                for r = 1:size(C_nrninfo,2)
+                    % Get the state occurance times
+                    s1Occs = C_combstates{1,r}{1,e}.sepData{s1,1};
+                    s2Occs = C_combstates{1,r}{1,e}.sepData{s2,1};
+                    if
+                    s1s2Occs = [s1Occs; s2Occs]; % Combine so I can loop easier later.
+                    % Loop through neurons and calculate FRs.
+                    for n = 1:size(C_nrninfo{1,r},1)
                     
                     S_nrn = C_nrninfo{1,r}{n,1};
                     if S_nrn.eHasSpikeData(1,e) % If nrn has spike data for this epoch 
-                        if strcmp(S_nrn.type,"Int")
-                            nrnColor = "red";
-                        elseif strcmp(S_nrn.type,"Pyr")
-                            nrnColor = "blue";
+                        % if strcmp(S_nrn.type,"Int")
+                        if strcmp(S_nrn.area,"PFC")
+                            % nrnColor = pltcolors{1}; %"red";
+                            areas = [areas; "PFC"];
+                        % elseif strcmp(S_nrn.type,"Pyr")
+                        elseif strcmp(S_nrn.area,"CA1")
+                            % nrnColor = pltcolors{2}; %"blue";
+                            areas = [areas; "CA1"];
                         end
 
                         spikes = S_nrn.eSpikeData{1,e}(:,1);
@@ -111,15 +142,22 @@ for r = 1:size(C_nrninfo,2)
                         s1Dur = sum(s1Occs(:,2) - s1Occs(:,1));
                         s2Dur = sum(s2Occs(:,2) - s2Occs(:,1));
 
-                        scatter(s1Sum/s1Dur,s2Sum/s2Dur,MarkerFaceColor=nrnColor, ...
-                            MarkerEdgeColor='k',Marker='.')
-                        
+                        % store FRs in matrix
+                        FRs = [FRs; s1Sum/s1Dur,s2Sum/s2Dur];
+                    end
 
                     end
-                    endla
+                end
+                scatter(FRs(areas=="CA1",1),FRs(areas=="CA1",2),[],pltcolors{2},'.')
+                scatter(FRs(areas=="PFC",1),FRs(areas=="PFC",2),[],pltcolors{1},'.')
+                if size(stateHist,1) == 2 % First plot only
+                legend({"CA1","PFC"},Location='best')
+                end
             end
         end
-    pause
     end
-
+    
+    linkaxes(tlaxes,'xy')
+    pause
 end
+
