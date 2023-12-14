@@ -17,7 +17,7 @@ loadRats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
 
 % Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01',
 % 'spikes01','tetinfo','linfields01','rippletime01','pos01','nrninfo_MES'
-filetypes = {'nrninfo_MES','tetinfo','pos01','sws01','rem01','rippletimes_MES','behavperform'};
+filetypes = {'nrninfo_MES','tetinfo','pos01','sws01','rem01','rippletimes_MES','behavperform','combstates_MES'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes); % Load data to struct
 
@@ -108,6 +108,7 @@ C_alltetinfo = C_alldata(ti_idx,:);
 C_behper = C_alldata(behper_idx,:);
 C_nrninfo = C_alldata(nrninfo_idx,:);
 C_pos = C_alldata(pos_idx,:);
+C_combstates = C_alldata(find(contains(filetypes,'combstates_MES')),:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -118,14 +119,15 @@ brainAreas = {'CA1','PFC'};
 
 
 
-%% Assign LMRV value to all neurons
+%% Assign LMRV value to all neurons (only locally, this is not saved to the 
+% nrninfo_MES file on disk).
 for r = 1:size(C_nrninfo,2)
     for nrn = 1:size(C_nrninfo{1,r},1)
         S_nrn = C_nrninfo{1,r}{nrn,1};
         LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
         C_nrninfo{1,r}{nrn,1}.LMRV = LMRV; % Assign LMRV to struct
         
-        LMRV_thr = 0.5; % threshold for a cell to be learning modulated.
+        LMRV_thr = 0.4; %0.5; % threshold for a cell to be learning modulated.
         C_nrninfo{1,r}{nrn,1}.LMRVthreshold = LMRV_thr;
         
         if LMRV >= LMRV_thr
@@ -149,38 +151,38 @@ end
 %% Plot LMRV with the FR of each PFC cell over time. I am doing this to get an idea of 
 % how cells vary firing behavior across time. Also plot probability of
 % correct choice
-% 
-% for r = 1:size(C_nrninfo,2)
-% 
-%     for nrn = 1:size(C_nrninfo{1,r},1)
-%         S_nrn = C_nrninfo{1,r}{nrn,1};
-% 
-%         if strcmp(S_nrn.area,"PFC")
-%             f = figure;
-%             title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f, type = %s", ...
-%                 loadRats{r},S_nrn.ID,S_nrn.type,S_nrn.LMRV,S_nrn.LMRVtype))
-% 
-%             xlabel("Epoch")
-%             colororder({'b','k'})
-% 
-%             yyaxis left
-%             hold on
-%             plot(1:17,S_nrn.eFR,'*-')
-%             plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
-%             ylabel("Mean Firing Rate (Hz)")
-%             yyaxis right
-%             plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
-%             ylabel("Fraction of Correct Trials")
-% 
-%             legend(["nrn FR","sum isPC","frac corr"],Location="Best")
-%             pause
-%             close all
-% 
-%         end
-% 
-%     end
-% 
-% end
+
+for r = 1:size(C_nrninfo,2)
+
+    for nrn = 1:size(C_nrninfo{1,r},1)
+        S_nrn = C_nrninfo{1,r}{nrn,1};
+
+        if strcmp(S_nrn.area,"PFC") && any(strcmp(S_nrn.LMRVtype,["rest-LMRV","beh-LMRV"]))
+            f = figure;
+            title(sprintf("%s PFC Neuron %d \n %s | LMRV = %.2f, type = %s", ...
+                loadRats{r},S_nrn.ID,S_nrn.type,S_nrn.LMRV,S_nrn.LMRVtype))
+
+            xlabel("Epoch")
+            colororder({'b','k'})
+
+            yyaxis left
+            hold on
+            plot(1:17,S_nrn.eFR,'*-')
+            plot(behEpochs,cellfun(@sum, S_nrn.eTrajisPC(behEpochs)),"cyan")
+            ylabel("Mean Firing Rate (Hz)")
+            yyaxis right
+            plot(behEpochs,C_behper{1,r}.eFracCorr,'k')
+            ylabel("Fraction of Correct Trials")
+
+            legend(["nrn FR","sum isPC","frac corr"],Location="Best")
+            pause
+            close all
+
+        end
+
+    end
+
+end
 
 
 
@@ -189,13 +191,13 @@ end
 stateColors = [[0 0.4470 0.7410]; [1 0 0]; [0.5 0.1 1]; [0.6 0.9 0]; [0 0.9 1]];
 
 r = 1;
-for e = 1:size(C_combStates,2)
+for e = 1:size(C_combstates,2)
 
     velData = C_pos{1,r}{1,e}.data(:,5);
     timeData = C_pos{1,r}{1,e}.data(:,1);
     velData = sgolayfilt(velData, 2, 31); % Smooth velocity
 
-    S_occ = C_combStates{r,e};
+    S_occ = C_combstates{1,r}{1,e};
     occs = S_occ.combSortData; % Occurances of all states in temporal order.
 
     % Get PFC pyramidal neurons and sort into LMRV and non-LMRV

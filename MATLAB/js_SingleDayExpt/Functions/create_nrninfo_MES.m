@@ -177,7 +177,7 @@ for r = 1:size(loadRats,2)
 
         % Calculate LMRV value and add to nrn struct
         LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
-        LMRV_thr = 0.5; % threshold for a cell to be learning modulated.
+        LMRV_thr = 0.4; % threshold for a cell to be learning modulated.
         S_nrn.LMRV = LMRV; % Assign LMRV to struct
         S_nrn.LMRVthreshold = LMRV_thr;
         if LMRV >= LMRV_thr

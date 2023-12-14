@@ -334,7 +334,7 @@ for e = 1:size(C_combstates{1,1},2)
     
         hold on
         xlabel(sprintf("FR in %s (Hz)",stateNames{s2}))
-        ylabel(sprintf("FR Preference towards %s (Hz)",stateNames{s2}))
+        ylabel(sprintf("FR Preference (%s - %s) (Hz)",stateNames{s2},stateNames{s1}))
         % set(gca, 'XScale', 'log', 'YScale', 'log');
         pltcolors = {[152,8,230]/230, [230,10,2]/230, [27,230,230]/230};
     
@@ -418,20 +418,83 @@ for e = 1:size(C_combstates{1,1},2)
                 end
             end
         end
-        % Sort the firing rates in state 2
-        [sorts2FRs,sorts2Idx] = sort(FRs(:,2));
-        % Sort the distances to match
-        sortDist = distDiag(sorts2Idx);
-        plot(sorts2FRs(LMRV==0),sortDist(LMRV==0),Color=pltcolors{1})
-        plot(sorts2FRs(LMRV==2),sortDist(LMRV==2),Color=pltcolors{3})
+        % Set up bar graph of average distances from diag, binning by the
+        % FR in state 2.
+        % FRbins = linspace(0,max(FRs(:,2)),2*sqrt(size(FRs,1)));
+        FRbins = linspace(0,6,4*6);
+        % Cell arrays containing the distances of each point from the FR
+        % diagonal.
+        distnonLMRV = cell(1,size(FRbins,2)-1);
+        distbehLMRV = cell(1,size(FRbins,2)-1);
+        distrestLMRV = cell(1,size(FRbins,2)-1);
+        for i = 1:numel(FRbins)-1
+            inBin = FRs(:,2) >= FRbins(i) & FRs(:,2) < FRbins(i+1);
+            distnonLMRV{i} = distDiag(inBin & LMRV==0);
+            distrestLMRV{i} = distDiag(inBin & LMRV==1);
+            distbehLMRV{i} = distDiag(inBin & LMRV==2);
+        end
+
+        % % For non-LMRV vs beh-LMRV.
+        % % Bar takes the center location of each for the xvals
+        bincntrs = FRbins(1:end-1)+(FRbins(end)-FRbins(1))/(2*(numel(FRbins)-1));
+        bplt = bar(bincntrs',[cellfun(@mean,distnonLMRV);cellfun(@mean,distbehLMRV)],...
+            "stacked","FaceColor","flat");
+        bplt(1).CData = pltcolors{1};
+        bplt(2).CData = pltcolors{3};
+        xtipsN = bplt(1).XEndPoints;
+        ytipsN = bplt(1).YEndPoints;
+        numPointsN = cellfun(@numel,distnonLMRV);
+        erbrsN = errorbar(xtipsN,ytipsN,...
+            cellfun(@std,distnonLMRV)./sqrt(numPointsN));
+        erbrsN.Color = "k";
+        erbrsN.LineStyle = "none";
+
+        numPointsB = cellfun(@numel,distbehLMRV);
+        xtipsB = bplt(2).XEndPoints;
+        ytipsB = bplt(2).YEndPoints;
+        erbrsB = errorbar(xtipsB,ytipsB,...
+            cellfun(@std,distbehLMRV)./sqrt(numPointsB));
+        erbrsB.Color = "k";
+        erbrsB.LineStyle = "none";
+
+        text(xtipsN,ytipsN+0.5*sign(ytipsN),string(numPointsN),HorizontalAlignment="center", ...
+            VerticalAlignment="bottom",Color=pltcolors{1})
+        text(xtipsB,ytipsB+0.5*sign(ytipsB),string(numPointsB),HorizontalAlignment="center", ...
+            VerticalAlignment="bottom",Color=pltcolors{3})
+        
+        % % For non-LMRV vs rest-LMRV
+        % bincntrs = FRbins(1:end-1)+(FRbins(end)-FRbins(1))/(2*(numel(FRbins)-1));
+        % bplt = bar(bincntrs',[cellfun(@mean,distnonLMRV);cellfun(@mean,distrestLMRV)],...
+        %     "stacked","FaceColor","flat");
+        % bplt(1).CData = pltcolors{1};
+        % bplt(2).CData = pltcolors{2};
+        % xtipsN = bplt(1).XEndPoints;
+        % ytipsN = bplt(1).YEndPoints;
+        % numPointsN = cellfun(@numel,distnonLMRV);
+        % erbrsN = errorbar(xtipsN,ytipsN,...
+        %     cellfun(@std,distnonLMRV)./sqrt(numPointsN));
+        % erbrsN.Color = "k";
+        % erbrsN.LineStyle = "none";
+        % 
+        % numPointsR = cellfun(@numel,distrestLMRV);
+        % xtipsR = bplt(2).XEndPoints;
+        % ytipsR = bplt(2).YEndPoints;
+        % erbrsR = errorbar(xtipsR,ytipsR,...
+        %     cellfun(@std,distrestLMRV)./sqrt(numPointsR));
+        % erbrsR.Color = "k";
+        % erbrsR.LineStyle = "none";
+        % 
+        % text(xtipsN,ytipsN+0.5*sign(ytipsN),string(numPointsN),HorizontalAlignment="center", ...
+        %     VerticalAlignment="bottom",Color=pltcolors{1})
+        % text(xtipsR,ytipsR+0.5*sign(ytipsR),string(numPointsR),HorizontalAlignment="center", ...
+        %     VerticalAlignment="bottom",Color=pltcolors{2})
     
-        legend({"non-LMRV","beh-LMRV"},Location='best')
+        legend({"non-LMRV","rest-LMRV"},Location='best')
     
         pause
     end
 end
-% I need to make this a histogram counting the number of cells in each FR
-% bin.
+
 
 %% NOTE: remove ripples from SWS and still states (check if they are in still)
 
