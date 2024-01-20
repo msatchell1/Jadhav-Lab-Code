@@ -108,58 +108,105 @@ ylabel("count")
 % effects have done their part. Thus what I am comparing is the effect of 
 % learning/consolidation, and not novelty.  
 
+% Note this analysis only considers cells that have both more than 1 epoch
+% with spatial coverage values and has spike data in the epochs the FR is
+% being calculated between.
+
 
 spatCovChng = []; % difference between first and last epoch in avg coverage value
-states = ["SWS","REM","ripple"];
-FRchngREM = []; % diff between second and last epoch in REM FR.
-FRchngSWS = [];
-FRchngRipple = [];
+FRChng = [];
+states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
+stateEpochs = [3,9]; % Which epochs to calculate change in FR between. Note
+% that the difference will be calculated as stateEpoch(2) - stateEpoch(1).
+
+if numel(stateEpochs) > 2
+    error("Only 2 epochs are permitted in stateEpochs, as the difference in" + ...
+        " FR is being calculated.")
+end
+
+
+% This loo fills two matrices: spatCovChng which holds the
+% change in spatial coverage for each neuron between the first and last
+% available epochs, and FRChng which holds the change in FR between the two
+% stateEpoch epochs for multiple states.
 for r = 1:size(C_nrninfo,2)
-    
-    stateEpochs = [3,17]; % Which epochs to grab the state occurances from
-    stateOccs = cell(numel(states),numel(stateEpochs)); % cell matrix to hold 
+
+    ratStateFRs = cell(numel(states),numel(stateEpochs)); % cell matrix to hold 
     % the occurance times for each state and each epoch.
-    % Loop through epochs to get the state occurance times
-    for e = stateEpochs
         
-        stateNames = C_combstates{1,r}{1,e}.stateNames;
-        idxREM = find(strcmp(stateNames,"REM"));
-        idxSWS = find(strcmp(stateNames,"SWS"));
-        idxRipple = find(strcmp(stateNames,"ripple"));
+    stateNames = C_combstates{1,r}{1,e}.stateNames; % state names that exist 
+    % within this epoch
 
-        % Next step: grab occurances from each epoch and state and store in
-        % stateOccs. Then go into the neuron loop and determine number of
-        % spikes in each state and epoch. Divide by total epoch time to get
-        % FR in that state for each epoch. Then take the difference of this
-        % FR between the two epochs to get a single number per neuron.
-        % Store this, along with the change in spatial coverage, then plot
-        % them against each other and look for correlations. Then repeat
-        % with LMRV and beh-LMRV neurons only.
-
-        
-        
-    end
-    
-
-
-
+    % Next step: grab occurances from each epoch and state and store in
+    % stateOccs. Then go into the neuron loop and determine number of
+    % spikes in each state and epoch. Divide by total epoch time to get
+    % FR in that state for each epoch. Then take the difference of this
+    % FR between the two epochs to get a single number per neuron.
+    % Store this, along with the change in spatial coverage, then plot
+    % them against each other and look for correlations. Then repeat
+    % with LMRV and beh-LMRV neurons only.
 
     for n = 1:size(C_nrninfo{1,r},1)
 
         nrn = C_nrninfo{1,r}{n,1};
         
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr")
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && ~strcmp(nrn.LMRVtype,"non-LMRV")
             covs = nrn.eTrajCoverage;
             isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
-            if sum(isCovExist) > 1 % If at least two epochs have spatial coverage values
+            
+            % If at least two epochs have spatial coverage values and the
+            % proper epochs have spike data
+            if sum(isCovExist) > 1 && all([nrn.eHasSpikeData(1,stateEpochs(1)), ...
+                    nrn.eHasSpikeData(1,stateEpochs(2))])
+                
                 covExist = covs(isCovExist);
                 avgCov = cellfun(@(x) mean(x,2,'omitnan'), covExist);
-                spatCovChng(end+1) = avgCov(end) - avgCov(1);
+                spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
+            
+                stateEpochFRs = NaN(numel(stateEpochs),numel(states));
+                % Loop through epoch indices
+                for ei = 1:numel(stateEpochs)
+
+                    % Find the number of spikes within each state
+                    for s = 1:numel(states)
+                        stateidx = find(strcmp(stateNames,states(s)));
+                        occs = C_combstates{1,r}{1,stateEpochs(ei)}.sepData{stateidx,1};
+                        
+                        if ~isempty(occs)
+                            spikes = nrn.eSpikeData{1,stateEpochs(ei)}(:,1);
+        
+                            % Holds the number of spikes for a given neuron
+                            % that occur during each state occurrance.
+                            numSpikesInOcc = zeros(size(occs,1),1);
+            
+                            % Loop through occurances of the state,
+                            % counting the number of spikes that fall into
+                            % each occurrance.
+                            for o = 1:size(occs,1)
+                                % spike times greater than state start time and less
+                                % than state end time.
+                                isInOcc = (occs(o,1) <= spikes) & (occs(o,2) > spikes);
+                                numSpikesInOcc(o,1) = sum(isInOcc);
+                            end
+            
+                            spikeSum = sum(numSpikesInOcc);
+                            stateDur = sum(occs(:,2) - occs(:,1)); % total duration of state
+                            stateEpochFRs(ei,s) = spikeSum/stateDur; % store FR
+                        end
+                    end
+                end
+
+                FRChng = [FRChng; stateEpochFRs(2,:)-stateEpochFRs(1,:)];
             end
         end
-
-
     end
+end
 
 
+for s = 1:numel(states)
+    figure;
+    plot(spatCovChng,FRChng(:,s),'o')
+    title(sprintf("Change in %s FR vs Change in Spatial Coverage",states(s)))
+    ylabel(sprintf("Change in FR (Epoch %d - %d)",stateEpochs(2),stateEpochs(1)))
+    xlabel("Change in spatial coverage")
 end
