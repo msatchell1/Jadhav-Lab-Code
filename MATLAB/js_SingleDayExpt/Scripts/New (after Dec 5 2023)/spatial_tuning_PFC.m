@@ -116,7 +116,7 @@ ylabel("count")
 spatCovChng = []; % difference between first and last epoch in avg coverage value
 FRChng = [];
 states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
-stateEpochs = [3,9]; % Which epochs to calculate change in FR between. Note
+stateEpochs = [3,17]; % Which epochs to calculate change in FR between. Note
 % that the difference will be calculated as stateEpoch(2) - stateEpoch(1).
 
 if numel(stateEpochs) > 2
@@ -124,44 +124,40 @@ if numel(stateEpochs) > 2
         " FR is being calculated.")
 end
 
+%allTrajCov = [];
 
 % This loo fills two matrices: spatCovChng which holds the
 % change in spatial coverage for each neuron between the first and last
 % available epochs, and FRChng which holds the change in FR between the two
 % stateEpoch epochs for multiple states.
 for r = 1:size(C_nrninfo,2)
-
-    ratStateFRs = cell(numel(states),numel(stateEpochs)); % cell matrix to hold 
-    % the occurance times for each state and each epoch.
         
     stateNames = C_combstates{1,r}{1,e}.stateNames; % state names that exist 
     % within this epoch
-
-    % Next step: grab occurances from each epoch and state and store in
-    % stateOccs. Then go into the neuron loop and determine number of
-    % spikes in each state and epoch. Divide by total epoch time to get
-    % FR in that state for each epoch. Then take the difference of this
-    % FR between the two epochs to get a single number per neuron.
-    % Store this, along with the change in spatial coverage, then plot
-    % them against each other and look for correlations. Then repeat
-    % with LMRV and beh-LMRV neurons only.
 
     for n = 1:size(C_nrninfo{1,r},1)
 
         nrn = C_nrninfo{1,r}{n,1};
         
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && ~strcmp(nrn.LMRVtype,"non-LMRV")
+        % This conditional can be changed to decide which PFC neurons get
+        % analyzed.
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,"beh-LMRV")
             covs = nrn.eTrajCoverage;
             isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
-            
+            %allTrajCov = [allTrajCov; nrn.eTrajCoverage{1,2},NaN,nrn.eTrajCoverage{1,16}];
             % If at least two epochs have spatial coverage values and the
             % proper epochs have spike data
             if sum(isCovExist) > 1 && all([nrn.eHasSpikeData(1,stateEpochs(1)), ...
                     nrn.eHasSpikeData(1,stateEpochs(2))])
-                
+                %[find(isCovExist,1,"first"),find(isCovExist,1,"last")]
                 covExist = covs(isCovExist);
-                avgCov = cellfun(@(x) mean(x,2,'omitnan'), covExist);
-                spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
+                %avgCov = cellfun(@(x) mean(x,2,'omitnan'), covExist);
+
+                % I want to find the trajectory that has the greatest drop
+                % in coverage from the first and last beh epoch
+                maxCovChng = min(covExist{end}-covExist{1});
+                %spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
+                spatCovChng = [spatCovChng; maxCovChng];
             
                 stateEpochFRs = NaN(numel(stateEpochs),numel(states));
                 % Loop through epoch indices
@@ -205,8 +201,108 @@ end
 
 for s = 1:numel(states)
     figure;
+    hold on
+    xline(0,'--k')
+    yline(0,"--k")
     plot(spatCovChng,FRChng(:,s),'o')
     title(sprintf("Change in %s FR vs Change in Spatial Coverage",states(s)))
     ylabel(sprintf("Change in FR (Epoch %d - %d)",stateEpochs(2),stateEpochs(1)))
-    xlabel("Change in spatial coverage")
+    xlabel("Largest drop in coverage")
 end
+
+
+%% Compare average FR for multiple epochs to spatial coverage change
+
+
+spatCovChng = []; % difference between first and last epoch in avg coverage value.
+states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
+epochsToAvg = [1]; % Different from stateEpochs above. Instead, all these epochs
+% will have the firing rates of each state calculated within them, and then
+% be averaged together.
+stateEpochFRs = cell(1,numel(states)); % To hold the FR for each neuron in each epoch
+
+for r = 1:size(C_nrninfo,2)
+        
+    stateNames = C_combstates{1,r}{1,e}.stateNames; % state names that exist 
+    % within this epoch
+
+    for n = 1:size(C_nrninfo{1,r},1)
+
+        nrn = C_nrninfo{1,r}{n,1};
+        
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,"beh-LMRV")
+            covs = nrn.eTrajCoverage;
+            isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
+            % If at least two epochs have spatial coverage values and the
+            % proper epochs have spike data
+            if sum(isCovExist) > 1
+
+                covExist = covs(isCovExist);
+                avgCov = cellfun(@(x) mean(x,2,'omitnan'), covExist);
+
+                % I want to find the trajectory that has the greatest drop
+                % in coverage from the first and last beh epoch
+                maxCovChng = min(covExist{end}-covExist{1});
+                % spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
+                spatCovChng = [spatCovChng; maxCovChng];
+
+                % Loop through epoch indices
+                for s = 1:numel(states)
+                    epochFRs = NaN(1,numel(epochsToAvg));
+                    % Find the number of spikes within each state
+                    for ei = 1:numel(epochsToAvg)
+                        stateidx = find(strcmp(stateNames,states(s)));
+                        occs = C_combstates{1,r}{1,epochsToAvg(ei)}.sepData{stateidx,1};
+                        
+                        if ~isempty(occs) && nrn.eHasSpikeData(epochsToAvg(ei))
+                            spikes = nrn.eSpikeData{1,epochsToAvg(ei)}(:,1);
+        
+                            % Holds the number of spikes for a given neuron
+                            % that occur during each state occurrance.
+                            numSpikesInOcc = zeros(size(occs,1),1);
+            
+                            % Loop through occurances of the state,
+                            % counting the number of spikes that fall into
+                            % each occurrance.
+                            for o = 1:size(occs,1)
+                                % spike times greater than state start time and less
+                                % than state end time.
+                                isInOcc = (occs(o,1) <= spikes) & (occs(o,2) > spikes);
+                                numSpikesInOcc(o,1) = sum(isInOcc);
+                            end
+            
+                            spikeSum = sum(numSpikesInOcc);
+                            stateDur = sum(occs(:,2) - occs(:,1)); % total duration of state
+                            epochFRs(1,ei) = spikeSum/stateDur; % store FR
+                        end
+                    end
+                    stateEpochFRs{1,s} = [stateEpochFRs{1,s}; epochFRs];
+                end
+            end
+        end
+    end
+end
+
+
+for s = 1:numel(states)
+    avgFR = mean(stateEpochFRs{1,s},2,'omitnan');
+    % Sort out neurons that had NaN FRs for all epochs
+    nanIdxs = isnan(avgFR);
+    avgFR = avgFR(~nanIdxs);
+    reducedCovChng = spatCovChng(~nanIdxs); % Important to assign this to a
+    % new variable because which neurons have NaN values changes with each
+    % state.
+    [ccoeffs, pval] = corrcoef(reducedCovChng,avgFR);
+    figure;
+    hold on
+    xline(0,'--k')
+    plot(reducedCovChng,avgFR,'o')
+    fitL = lsline;
+    lstxt = sprintf("corr=%.2d \n p=%.2d",ccoeffs(2),pval(2));
+    text(fitL.XData(2),fitL.YData(2),lstxt)
+    title(sprintf("Avg %s FR vs Change in Spatial Coverage",states(s)))
+    ylabel("Avg FR over Epochs: "+join(string(epochsToAvg),","))
+    %xlabel("Avg drop in coverage (all trajs)")
+    xlabel("Largest drop in coverage (single traj)")
+end
+
