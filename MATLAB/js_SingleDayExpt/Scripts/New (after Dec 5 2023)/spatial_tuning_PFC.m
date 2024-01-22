@@ -216,9 +216,9 @@ end
 
 spatCovChng = []; % difference between first and last epoch in avg coverage value.
 states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
-epochsToAvg = [1]; % Different from stateEpochs above. Instead, all these epochs
+epochsToAvg = [3]; % Different from stateEpochs above. Instead, all these epochs
 % will have the firing rates of each state calculated within them, and then
-% be averaged together.
+% be averaged together. Epochs here must have the states in 'states'.
 stateEpochFRs = cell(1,numel(states)); % To hold the FR for each neuron in each epoch
 
 for r = 1:size(C_nrninfo,2)
@@ -243,8 +243,8 @@ for r = 1:size(C_nrninfo,2)
                 % I want to find the trajectory that has the greatest drop
                 % in coverage from the first and last beh epoch
                 maxCovChng = min(covExist{end}-covExist{1});
-                % spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
-                spatCovChng = [spatCovChng; maxCovChng];
+                spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
+                % spatCovChng = [spatCovChng; maxCovChng];
 
                 % Loop through epoch indices
                 for s = 1:numel(states)
@@ -299,10 +299,10 @@ for s = 1:numel(states)
     plot(reducedCovChng,avgFR,'o')
     fitL = lsline;
     lstxt = sprintf("corr=%.2d \n p=%.2d",ccoeffs(2),pval(2));
-    text(fitL.XData(2),fitL.YData(2),lstxt)
+    text((fitL.XData(1)-fitL.XData(2))/2,fitL.YData(2),lstxt)
     title(sprintf("Avg %s FR vs Change in Spatial Coverage",states(s)))
     ylabel("Avg FR over Epochs: "+join(string(epochsToAvg),","))
-    %xlabel("Avg drop in coverage (all trajs)")
-    xlabel("Largest drop in coverage (single traj)")
+    xlabel("Avg drop in coverage (all trajs)")
+    % xlabel("Largest drop in coverage (single traj)")
 end
 
