@@ -56,13 +56,15 @@ brainAreas = {'CA1','PFC'};
 spatCovSpan = []; % span of spatial coverage for each epoch (highest-lowest traj val)
 spatCovAvg = []; % average value across trajs for each epoch
 spatCovChng = []; % difference between first and last epoch in avg coverage value
+LMRVtype = "non-LMRV";
+trajFR = []; % Firing rates on all trajectories for all epochs and cells
 for r = 1:size(C_nrninfo,2)
     
     for n = 1:size(C_nrninfo{1,r},1)
 
         nrn = C_nrninfo{1,r}{n,1};
         
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,"non-LMRV")
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,LMRVtype)
             covs = nrn.eTrajCoverage;
             isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
             if sum(isCovExist) > 1 % If at least two epochs have spatial coverage values
@@ -72,6 +74,7 @@ for r = 1:size(C_nrninfo,2)
                 spatCovChng(end+1) = avgCov(end) - avgCov(1);
                 for e = 1:size(covExist,2)
                     spatCovSpan(end+1) = max(covExist{1,e}) - min(covExist{1,e});
+                    trajFR = [trajFR; nrn.eTrajFR{1,e}];
                 end
             end
         end
@@ -84,20 +87,26 @@ end
 
 figure
 histogram(spatCovSpan,20)
-title("Spatial Coverage Span per Epoch all PFC Pyr non-LMRV")
+title(sprintf("Spatial Coverage Span per Epoch all PFC Pyr %s",LMRVtype))
 xlabel("max(cov) - min(cov)")
 ylabel("count")
 
 figure
 histogram(spatCovAvg,20)
-title("Avg Spatial Coverage all Epochs all PFC Pyr non-LMRV")
+title(sprintf("Avg Spatial Coverage all Epochs all PFC Pyr %s",LMRVtype))
 xlabel("mean cov across trajs")
 ylabel("count")
 
 figure
 histogram(spatCovChng,30)
-title("Change in Spatial Coverage all PFC Pyr non-LMRV")
+title(sprintf("Change in Spatial Coverage all PFC Pyr %s",LMRVtype))
 xlabel("(mean last epoch) - (mean first epoch)")
+ylabel("count")
+
+figure
+histogram(trajFR(:),50)
+title(sprintf("Trajectory FR all PFC Pyr all Epochs %s",LMRVtype))
+xlabel("Rate (Hz)")
 ylabel("count")
 
 
