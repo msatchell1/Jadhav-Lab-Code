@@ -131,9 +131,6 @@ end
 % available epochs, and FRChng which holds the change in FR between the two
 % stateEpoch epochs for multiple states.
 for r = 1:size(C_nrninfo,2)
-        
-    stateNames = C_combstates{1,r}{1,e}.stateNames; % state names that exist 
-    % within this epoch
 
     for n = 1:size(C_nrninfo{1,r},1)
 
@@ -162,6 +159,9 @@ for r = 1:size(C_nrninfo,2)
                 stateEpochFRs = NaN(numel(stateEpochs),numel(states));
                 % Loop through epoch indices
                 for ei = 1:numel(stateEpochs)
+
+                    stateNames = C_combstates{1,r}{1,ei}.stateNames; % state names that exist 
+                    % within this epoch 
 
                     % Find the number of spikes within each state
                     for s = 1:numel(states)
@@ -216,21 +216,18 @@ end
 
 spatCovChng = []; % difference between first and last epoch in avg coverage value.
 states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
-epochsToAvg = [3]; % Different from stateEpochs above. Instead, all these epochs
+epochsToAvg = [17]; % Different from stateEpochs above. Instead, all these epochs
 % will have the firing rates of each state calculated within them, and then
 % be averaged together. Epochs here must have the states in 'states'.
 stateEpochFRs = cell(1,numel(states)); % To hold the FR for each neuron in each epoch
 
 for r = 1:size(C_nrninfo,2)
-        
-    stateNames = C_combstates{1,r}{1,e}.stateNames; % state names that exist 
-    % within this epoch
 
     for n = 1:size(C_nrninfo{1,r},1)
 
         nrn = C_nrninfo{1,r}{n,1};
         
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,"beh-LMRV")
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,"beh-LMRV")
             covs = nrn.eTrajCoverage;
             isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
             % If at least two epochs have spatial coverage values and the
@@ -246,11 +243,13 @@ for r = 1:size(C_nrninfo,2)
                 spatCovChng = [spatCovChng; avgCov(end) - avgCov(1)];
                 % spatCovChng = [spatCovChng; maxCovChng];
 
-                % Loop through epoch indices
+                % Loop through epoch indices (not epoch numbers)
                 for s = 1:numel(states)
                     epochFRs = NaN(1,numel(epochsToAvg));
                     % Find the number of spikes within each state
                     for ei = 1:numel(epochsToAvg)
+                        stateNames = C_combstates{1,r}{1,ei}.stateNames; % state names that exist 
+                        % within this epoch
                         stateidx = find(strcmp(stateNames,states(s)));
                         occs = C_combstates{1,r}{1,epochsToAvg(ei)}.sepData{stateidx,1};
                         
