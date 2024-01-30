@@ -50,8 +50,9 @@ brainAreas = {'CA1','PFC'};
 
 FRChng = [];
 states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
-stateEpochs = [5,13]; % Which epochs to calculate change in FR between. Note
+stateEpochs = [5,7]; % Which epochs to calculate change in FR between. Note
 % that the difference will be calculated as stateEpoch(2) - stateEpoch(1).
+cellType = "beh-LMRV";
 
 if numel(stateEpochs) > 2
     error("Only 2 epochs are permitted in stateEpochs, as the difference in" + ...
@@ -68,7 +69,7 @@ for r = 1:size(C_nrninfo,2)
         
         % This conditional can be changed to decide which PFC neurons get
         % analyzed.
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,"beh-LMRV")
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,cellType)
 
             if all([nrn.eHasSpikeData(1,stateEpochs(1)), ...
                     nrn.eHasSpikeData(1,stateEpochs(2))])
@@ -128,7 +129,7 @@ hold on
 xline(0,'--k')
 yline(0,"--k")
 plot(s1FRs,s2FRs,'o',Color=[144, 20, 222]/222) % purple
-title(sprintf("beh-LMRV Change in FR: %s vs %s",states(s2),states(s1)))
+title(sprintf("%s Change in FR: %s vs %s",cellType,states(s2),states(s1)))
 ylabel(sprintf("Change in %s FR (Epoch %d - %d)",states(s2),stateEpochs(2),stateEpochs(1)))
 xlabel(sprintf("Change in %s FR (Epoch %d - %d)",states(s1),stateEpochs(2),stateEpochs(1)))
 
@@ -144,7 +145,7 @@ text(0,fitL.YData(2),lstxt)
 % Adapted from spatial_tuning_PFC.m
 
 states = ["SWS","REM","ripple"]; % must be "SWS","REM","ripple","run","still"
-epochs = [3,5,7,13,15,17]; % Epochs to store state FR data from. Epochs here must have the states in 'states'.
+epochs = [17]; % Epochs to store state FR data from. Epochs here must have the states in 'states'.
 stateEpochFRs = cell(1,numel(states)); % To hold the FR for each neuron in each epoch
 
 for r = 1:size(C_nrninfo,2)
@@ -195,6 +196,43 @@ for r = 1:size(C_nrninfo,2)
 end
 
 
+% % s1 and s2 are indices into 'states' variable
+% s1 = 3; s2 = 2;
+% % Epoch indices for grouping and averaging. Note that change in FR is
+% % calculated as mean(group2) - mean(group1).
+% eGroup1 = [1,2,3]; eGroup2 = [4,5,6];
+% 
+% s1FRs = stateEpochFRs{1,s1}; 
+% s2FRs = stateEpochFRs{1,s2};
+% 
+% % Average across epochs that are grouped together for each state
+% s1MeanChng = mean(s1FRs(:,eGroup2),2,'omitnan') - mean(s1FRs(:,eGroup1),2,'omitnan');
+% s2MeanChng = mean(s2FRs(:,eGroup2),2,'omitnan') - mean(s2FRs(:,eGroup1),2,'omitnan');
+% 
+% % Remove any NaNs
+% nanIdxs = logical(isnan(s1MeanChng)+isnan(s2MeanChng));
+% s1MeanChng = s1MeanChng(~nanIdxs); 
+% s2MeanChng = s2MeanChng(~nanIdxs); 
+% 
+% [ccoeffs, pval] = corrcoef(s1MeanChng,s2MeanChng);
+% 
+% figure;
+% hold on
+% xline(0,'--k')
+% yline(0,"--k")
+% plot(s1MeanChng,s2MeanChng,'o',Color=[222, 144, 20]/222) % orange
+% %title(sprintf("beh-LMRV Change in FR: %s vs %s",states(s2),states(s1)))
+% title(sprintf("beh-LMRV Change in FR: %s vs %s",states(s2),states(s1)))
+% ylabel(sprintf("Change in %s FR ( mean(%s) - mean(%s) )",states(s2),...
+%     join(string(epochs(eGroup2))), join(string(epochs(eGroup1)))))
+% xlabel(sprintf("Change in %s FR ( mean(%s) - mean(%s) )",states(s1),...
+%     join(string(epochs(eGroup2))), join(string(epochs(eGroup1)))))
+% fitL = lsline;
+% lstxt = sprintf("corr=%.1d \n p=%.1d",ccoeffs(2),pval(2));
+% text(0,fitL.YData(2),lstxt)
+
+
+% Plot FR vs FR (not change in FR)
 % s1 and s2 are indices into 'states' variable
 s1 = 3; s2 = 2;
 % Epoch indices for grouping and averaging. Note that change in FR is

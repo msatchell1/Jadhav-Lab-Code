@@ -51,20 +51,24 @@ brainAreas = {'CA1','PFC'};
 % coverage on all trajectories. This will tell me if I can combine
 % trajectory coverages into one number and represent that cell accurately.
 
+% As a reminder: There are four columns here representing the four W-track trajectories.
+% Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
+
 % To do this, I will make a histogram of the difference between the largest
 % and smallest coverage values for each epoch of each PFC pyr neuron.
 spatCovSpan = []; % span of spatial coverage for each epoch (highest-lowest traj val)
 spatCovAvg = []; % average value across trajs for each epoch
 spatCovChng = []; % difference between first and last epoch in avg coverage value
-LMRVtype = "non-LMRV";
+cellType = "non-LMRV";
 trajFR = []; % Firing rates on all trajectories for all epochs and cells
+trajSC = [];
 for r = 1:size(C_nrninfo,2)
     
     for n = 1:size(C_nrninfo{1,r},1)
 
         nrn = C_nrninfo{1,r}{n,1};
         
-        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,LMRVtype)
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,cellType)
             covs = nrn.eTrajCoverage;
             isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
             if sum(isCovExist) > 1 % If at least two epochs have spatial coverage values
@@ -85,27 +89,27 @@ for r = 1:size(C_nrninfo,2)
 
 end
 
-figure
-histogram(spatCovSpan,20)
-title(sprintf("Spatial Coverage Span per Epoch all PFC Pyr %s",LMRVtype))
-xlabel("max(cov) - min(cov)")
-ylabel("count")
-
-figure
-histogram(spatCovAvg,20)
-title(sprintf("Avg Spatial Coverage all Epochs all PFC Pyr %s",LMRVtype))
-xlabel("mean cov across trajs")
-ylabel("count")
-
-figure
-histogram(spatCovChng,30)
-title(sprintf("Change in Spatial Coverage all PFC Pyr %s",LMRVtype))
-xlabel("(mean last epoch) - (mean first epoch)")
-ylabel("count")
+% figure
+% histogram(spatCovSpan,20)
+% title(sprintf("Spatial Coverage Span per Epoch all PFC Pyr %s",LMRVtype))
+% xlabel("max(cov) - min(cov)")
+% ylabel("count")
+% 
+% figure
+% histogram(spatCovAvg,20)
+% title(sprintf("Avg Spatial Coverage all Epochs all PFC Pyr %s",LMRVtype))
+% xlabel("mean cov across trajs")
+% ylabel("count")
+% 
+% figure
+% histogram(spatCovChng,30)
+% title(sprintf("Change in Spatial Coverage all PFC Pyr %s",LMRVtype))
+% xlabel("(mean last epoch) - (mean first epoch)")
+% ylabel("count")
 
 figure
 histogram(trajFR(:),50)
-title(sprintf("Trajectory FR all PFC Pyr all Epochs %s",LMRVtype))
+title(sprintf("Trajectory FR all PFC Pyr all Epochs %s",cellType))
 xlabel("Rate (Hz)")
 ylabel("count")
 
@@ -314,3 +318,160 @@ for s = 1:numel(states)
     % xlabel("Largest drop in coverage (single traj)")
 end
 
+
+
+%% Combining trajectory measures for all neurons separated by epoch
+% As a reminder: There are four columns here representing the four W-track trajectories.
+% Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
+
+cellType = "CA1";
+trajFR = cell(size(C_combstates{1,1})); % Firing rates on all trajectories for all epochs and cells
+trajSC = cell(size(C_combstates{1,1})); % Spatial coverage
+trajPk = cell(size(C_combstates{1,1})); % Peak firing rate
+trajisPC = cell(size(C_combstates{1,1})); % Place cell (1) or not (0)
+for r = 1:size(C_nrninfo,2)
+    
+    for n = 1:size(C_nrninfo{1,r},1)
+
+        nrn = C_nrninfo{1,r}{n,1};
+        
+        if strcmp(nrn.area,"CA1") && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,cellType)
+    
+            for e = 1:size(nrn.eTrajFR,2) % Loops through all epochs
+                if ~isempty(nrn.eTrajFR{1,e}) % assume that if this nrn has FR data 
+                    % for this epoch, then all other traj measures will
+                    % exist.
+                    trajFR{1,e} = [trajFR{1,e}; nrn.eTrajFR{1,e}];
+                    trajSC{1,e} = [trajSC{1,e}; nrn.eTrajCoverage{1,e}];
+                    trajPk{1,e} = [trajPk{1,e}; nrn.eTrajFRPeak{1,e}];
+                    trajisPC{1,e} = [trajisPC{1,e}; nrn.eTrajisPC{1,e}];
+                end
+            end
+
+        end
+
+
+    end
+
+
+end
+
+% figure
+% tl = tiledlayout(2,1);
+% e = 2; % Even epochs only
+% numBins = 20;
+% 
+% nexttile
+% histogram(trajSC{1,e}(:,[2,4]),numBins) % inbound trajs
+% title("Inbound")
+% 
+% nexttile
+% histogram(trajSC{1,e}(:,[1,3]),numBins) % outbound trajs
+% title("Outbound")
+% 
+% title(tl,sprintf("Spatial Coverage on Epoch %d for %s",e,cellType))
+% xlabel(tl,"Spatial Coverage")
+% ylabel(tl,"Count")
+% linkaxes
+
+
+% figure
+% tl = tiledlayout(2,1);
+% e = 2; % Even epochs only
+% numBins = 30;
+% 
+% nexttile
+% histogram(trajFR{1,e}(:,[2,4]),numBins) % inbound trajs
+% title("Inbound")
+% 
+% nexttile
+% histogram(trajFR{1,e}(:,[1,3]),numBins) % outbound trajs
+% title("Outbound")
+% 
+% title(tl,sprintf("Mean Trajectory FR on Epoch %d for %s",e,cellType))
+% xlabel(tl,"Rate (Hz)")
+% ylabel(tl,"Count")
+% linkaxes
+
+
+
+% figure
+% tl = tiledlayout(2,1);
+% e = 16; % Even epochs only
+% dataArray = trajPk{1,e};
+% numBins = 30;
+% binEdges = linspace(min(dataArray(:)),max(dataArray(:)),numBins);
+% 
+% nexttile
+% histogram(dataArray(:,[2,4]),binEdges) % inbound trajs
+% title("Inbound")
+% 
+% nexttile
+% histogram(dataArray(:,[1,3]),binEdges) % outbound trajs
+% title("Outbound")
+% 
+% title(tl,sprintf("Trajectory Peak FR on Epoch %d for %s",e,cellType))
+% xlabel(tl,"Rate (Hz)")
+% ylabel(tl,"Count")
+% linkaxes
+
+
+ 
+% figure
+% tl = tiledlayout(2,1);
+% e = 2; % Even epochs only
+% dataArray = trajisPC{1,e};
+% 
+% binEdges = [-0.5,0.5,1.5,2.5];
+% 
+% nexttile
+% histogram(sum(dataArray(:,[2,4]),2),binEdges) % inbound trajs
+% title("Inbound")
+% 
+% nexttile
+% histogram(sum(dataArray(:,[1,3]),2),binEdges) % outbound trajs
+% title("Outbound")
+% 
+% title(tl,sprintf("Number of Place Fields on Epoch %d for %s",e,cellType))
+% xlabel(tl,"Number of Place Fields for a Cell")
+% ylabel(tl,"Count")
+% linkaxes
+
+
+% % Correlate trajectory peak FR with trajectory spatial coverage
+% figure
+% e1 = 2;
+% trajsToPlot = [2,4];
+% data1 = reshape(trajSC{1,e1}(:,trajsToPlot),[],1);
+% data2 = reshape(trajPk{1,e1}(:,trajsToPlot),[],1);
+% hold on
+% % xline(0,'--k')
+% % yline(0,"--k")
+% plot(data1,data2,'o',Color=[50, 190, 210]/222) % cyan
+% title(sprintf("Peak FR and Spatial Coverage for Traj %s, %s",join(string(trajsToPlot)),cellType))
+% ylabel(sprintf("Peak Rate (Hz)"))
+% xlabel(sprintf("Spatial Coverage"))
+% 
+% % Plot another epoch on same graph
+% e2 = 16;
+% data1 = reshape(trajSC{1,e2}(:,trajsToPlot),[],1);
+% data2 = reshape(trajPk{1,e2}(:,trajsToPlot),[],1);
+% hold on
+% plot(data1,data2,'o',Color=[0, 0, 0]/222) % black
+% fitL = lsline();
+% [fitL.LineWidth] = deal(2,2);
+% legend([sprintf("epoch %d",e1),sprintf("epoch %d",e2)])
+
+
+% figure
+% combSC = [];
+% for e = 1:size(trajSC,2)
+%     combSC = [combSC; trajSC{1,e}];
+% end
+% medSC = median(combSC,2);
+% h = histogram(medSC);
+% h.FaceColor = 'r';
+% title(sprintf("Spatial Coverage For Each Epoch %s",cellType))
+% xlabel("Median Coverage Across All 4 Trajectories")
+% ylabel("Count")
+% ylim([0,700])
