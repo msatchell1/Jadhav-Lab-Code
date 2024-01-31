@@ -117,16 +117,7 @@ for r = 1:size(loadRats,2)
                 end
                 
 
-                % Collect linfield FR info. 
-                % Reminder for the LinField data: 
-                % There are four columns here representing the four W-track
-                % trajectories:
-                % Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
-                % Inside each trajectory lies 7 columns of data:
-                % Col 1 is the distance in cm along that linearized
-                % trajectory, col 2 occupancy, col 3 spike count, col 4 occupancy normalized
-                % firing rate, col 5 smoothed occupancy normalized firing rate, col 6
-                % smoothed occupancy, col 7 smoothed spike count.
+                % Collect linfield FR info.
                 if e <= size(C_linf{1,r},2) % C_linf only has 16 epochs
                     if ~isempty(C_linf{1,r}{1,e}) % Exclude sleep epochs which don't have data
                         if ~isempty(C_linf{1,r}{1,e}{1,tet}) % Not all tetrodes have data.
@@ -140,7 +131,6 @@ for r = 1:size(loadRats,2)
                             if n <= size(C_linf{1,r}{1,e}{1,tet},2)
                                 if ~isempty(C_linf{1,r}{1,e}{1,tet}{1,n})
                                     epochLinField{nrnCount,e} = C_linf{1,r}{1,e}{1,tet}{1,n};
-                                    
                                 end
                             end
                         end
@@ -210,7 +200,7 @@ for r = 1:size(loadRats,2)
         S_nrn.eTrajCoverage = epochTrajCoverage(nrn,:);
         S_nrn.eTrajFRPeak = epochTrajPeaks(nrn,:);
 
-        S_nrn.eTrajLinField = epochLinField(nrn,:);
+        S_nrn.eTraj
 
 
         % Calculate LMRV value and add to nrn struct

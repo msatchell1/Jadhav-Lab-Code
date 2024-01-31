@@ -1,0 +1,73 @@
+% Script to identify trajectory-choice selective cells and analyze them
+% Michael Satchell 11/02/23
+
+
+%% Load data
+
+clearvars;
+
+dataDir = '/media/msatchell/10TBSpinDisk/js_SingleDayExpt'; % Location of data for all rats
+% For this analysis I want to consider all rats, and all nrns on all
+% tetrodes for each rat.
+
+% All good rats: ZT2 ER1_NEW KL8 BG1 JS14 JS15 JS17 JS21 JS34 
+loadRats = {'ZT2','ER1_NEW','KL8','BG1','JS14','JS15','JS17','JS21','JS34'};
+
+% Common file types: 'cellinfo','sleep01','waking01','sws01','rem01','ripples01',
+% 'spikes01','tetinfo','linfields01','rippletime01','pos01','nrninfo_MES','combstates_MES'
+filetypes = {'nrninfo_MES','pos01','linfields01','combstates_MES'};
+
+C_alldata = load_data(dataDir,loadRats,filetypes); % Load data to struct
+
+
+C_linf = C_alldata(find(contains(filetypes,'linfields01')),:);
+C_nrninfo = C_alldata(find(contains(filetypes,'nrninfo_MES')),:);
+C_pos = C_alldata(find(contains(filetypes,'pos01')),:);
+C_combstates = C_alldata(find(contains(filetypes,'combstates_MES')),:);
+
+behEpochs = 2:2:17;
+restEpochs = 1:2:17;
+brainAreas = {'CA1','PFC'};
+
+
+%% Identify choice-selective cells
+
+% As a reminder: There are four columns here representing the four W-track trajectories.
+% Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
+
+% For each cell, 
+
+% To do this, I will make a histogram of the difference between the largest
+% and smallest coverage values for each epoch of each PFC pyr neuron.
+spatCovSpan = []; % span of spatial coverage for each epoch (highest-lowest traj val)
+spatCovAvg = []; % average value across trajs for each epoch
+spatCovChng = []; % difference between first and last epoch in avg coverage value
+cellType = "non-LMRV";
+trajFR = []; % Firing rates on all trajectories for all epochs and cells
+trajSC = [];
+for r = 1:size(C_nrninfo,2)
+    
+    for n = 1:size(C_nrninfo{1,r},1)
+
+        nrn = C_nrninfo{1,r}{n,1};
+        
+        if strcmp(nrn.area,"PFC") && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,cellType)
+            covs = nrn.eTrajCoverage;
+            isCovExist = cellfun(@(x) ~isempty(x), covs); % Epochs that have spat cov vals
+            if sum(isCovExist) > 1 % If at least two epochs have spatial coverage values
+                covExist = covs(isCovExist);
+                avgCov = cellfun(@(x) mean(x,2,'omitnan'), covExist);
+                spatCovAvg = [spatCovAvg, avgCov];
+                spatCovChng(end+1) = avgCov(end) - avgCov(1);
+                for e = 1:size(covExist,2)
+                    spatCovSpan(end+1) = max(covExist{1,e}) - min(covExist{1,e});
+                    trajFR = [trajFR; nrn.eTrajFR{1,e}];
+                end
+            end
+        end
+
+
+    end
+
+
+end
