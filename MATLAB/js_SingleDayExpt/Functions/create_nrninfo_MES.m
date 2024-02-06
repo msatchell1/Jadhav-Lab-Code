@@ -15,7 +15,7 @@ function [] = create_nrninfo_MES(dataDir,loadRats)
 % label_interneurons(dataDir,loadRats);
 
 %% Load data
-filetypes = {'spikes01','behavperform','linfields'};
+filetypes = {'spikes01','behavperform','linfields','linpos01'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes);
 
@@ -30,10 +30,14 @@ end
 if ~any(contains(filetypes,'linfields'))
     error("linfields data must be loaded to run this analysis.")
 end
+if ~any(contains(filetypes,'linpos01'))
+    error("linpos01 data must be loaded to run this analysis.")
+end
 
 C_allspikes = C_alldata(spikes_idx,:);
 C_behper = C_alldata(behper_idx,:);
 C_linf = C_alldata(find(contains(filetypes,'linfields')),:);
+C_linpos = C_alldata(find(contains(filetypes,'linpos01')),:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -209,9 +213,88 @@ for r = 1:size(loadRats,2)
         S_nrn.eTrajSparsity = epochTrajSparsity(nrn,:);
         S_nrn.eTrajCoverage = epochTrajCoverage(nrn,:);
         S_nrn.eTrajFRPeak = epochTrajPeaks(nrn,:);
-
+        
+        % Linear Field calculations
         S_nrn.eTrajLinField = epochLinField(nrn,:);
+        ctrStemLen = 80; % length of center stem of W-track in cm.
+        minNumSpikes = 150; % Minimum number of spikes needed to run the selectivity
+        % index on an epoch
+        eSelIdx2 = NaN(1,size(C_allspikes{1,r},2));
+        % figure;
+        % tl = tiledlayout(2,4);
+        % lgdExist = 0;
+        for e = find(~cellfun(@isempty,(epochLinField(nrn,:))))
+            % Some cells don't have data during beh epochs
+            if ~any([isempty(epochLinField{nrn,e}), isempty(S_nrn.eSpikeData{1,e})])
 
+                % Actually finding the spikes that occur on the center
+                % stem.
+                % The linear distance of the animal matched with indices
+                linDist = C_linpos{1,r}{1,e}.statematrix.lindist;
+                linIsCtr = linDist <= ctrStemLen;
+                ctrIdxs = find(linIsCtr);
+                % get all spikes
+                spikeData = S_nrn.eSpikeData{1,e};
+                isCtrSpike = ismember(spikeData(:,7),ctrIdxs);
+                ctrSpikeData = spikeData(isCtrSpike,:); % Spikes that occur on center stem
+                % Identify indices of outbound trajs
+                linTraj = C_linpos{1,r}{1,e}.statematrix.traj;
+                isOutboundR = ismember(linTraj,[1]);
+                isOutboundL = ismember(linTraj,[3]);
+                outRIdxs = find(isOutboundR);
+                outLIdxs = find(isOutboundL);
+                % Sort spikes even further
+                ctrOutRSpkData = ctrSpikeData(ismember(ctrSpikeData(:,7),outRIdxs),:);
+                ctrOutLSpkData = ctrSpikeData(ismember(ctrSpikeData(:,7),outLIdxs),:);
+
+
+                % Get the occupancy-normalized spike count for right and left
+                % outbound trajectories on the center stem
+                isCtr_right = epochLinField{nrn,e}{1,1}(:,1) <= ctrStemLen;
+                isCtr_left = epochLinField{nrn,e}{1,3}(:,1) <= ctrStemLen;
+
+                % Smoothed occupancy normalized spike count (I'm calling it FR,
+                % but in reality the rate is calculated when normalizing by
+                % occupancy).
+                ctrRData = epochLinField{nrn,e}{1,1}(isCtr_right,:);
+                ctrLData = epochLinField{nrn,e}{1,3}(isCtr_left,:);
+                
+                % Better selectivity index, confirmed by inspecting
+                % examples.
+                diffNaN = isnan(ctrRData(:,5) - ctrLData(:,5));
+                
+                % Only give selectivity index when there are enough spikes
+                if numel(ctrOutLSpkData)+numel(ctrOutRSpkData) >= minNumSpikes
+                    selIdx2 = sum(ctrRData(:,5) - ctrLData(:,5),'omitnan')/...
+                        mean([sum(ctrRData(~diffNaN,5)), sum(ctrLData(~diffNaN,5))]);
+                else
+                    selIdx2 = NaN;
+                end
+                eSelIdx2(1,e) = selIdx2;
+
+                % nexttile
+                % hold on;
+                % plot(ctrRData(:,1),ctrRData(:,5),'r')
+                % plot(ctrLData(:,1),ctrLData(:,5),'b')
+                % plot(ctrRData(:,1),ctrRData(:,5)-ctrLData(:,5),Color=[0.7,0.7,0.7])
+                % yline(0,'--k')
+                % plot(linDist(ctrOutRSpkData(:,7)),rand(size(ctrOutRSpkData))*3-5,'.r')
+                % plot(linDist(ctrOutLSpkData(:,7)),rand(size(ctrOutLSpkData))*3-8,'.b')
+                % xlabel("Linearized Distance (cm)")
+                % title(sprintf("%s nrn %d Epoch %d \n selIdx2 = %.2f, numSpikes = %d", ...
+                %     S_nrn.area,S_nrn.ID,e,selIdx2,numel(ctrOutLSpkData)+numel(ctrOutRSpkData)))
+                % if ~lgdExist
+                %     legend("Right Trajs","Left Trajs","R-L",Location="best")
+                %     lgdExist = 1;
+                % end
+                
+            end
+
+        end
+        % pause
+        % close all
+
+        S_nrn.eChoiceSelectivityIdx = eSelIdx2;
 
         % Calculate LMRV value and add to nrn struct
         LMRV = calc_LMRV(C_behper{1,r}.eFracCorr,S_nrn.eFR);
