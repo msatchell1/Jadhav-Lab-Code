@@ -40,8 +40,8 @@ brainAreas = {'CA1','PFC'};
 % smoothed occupancy, col 7 smoothed spike count.
 
 
-cellType = "All";
-area = "CA1";
+cellType = "beh-LMRV";
+area = "PFC";
 % Combining data from all rats in the below arrays:
 trajFR = cell(size(C_combstates{1,1})); % Firing rates on all trajectories for all epochs and cells
 trajSC = cell(size(C_combstates{1,1})); % Spatial coverage
@@ -49,36 +49,33 @@ trajPk = cell(size(C_combstates{1,1})); % Peak firing rate
 trajisPC = cell(size(C_combstates{1,1})); % Place cell (1) or not (0)
 chcIdx = cell(size(C_combstates{1,1})); % Choice selectivity index.
 % abs(choice selectivity index) averaged across all epochs for every neuron
-allNrnChc = [];
+
 for r = 1:size(C_nrninfo,2)
-    eChcIdx = []; % Choice selectivity index.
-    % chcIdxBehLMRV = [];
-    for n = 1:size(C_nrninfo{1,r},1)
-
-        nrn = C_nrninfo{1,r}{n,1};
-        
-        if strcmp(nrn.area,area) && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,cellType)
     
-            for e = 1:size(nrn.eTrajFR,2) % Loops through all epochs
-                if ~isempty(nrn.eTrajFR{1,e}) % assume that if this nrn has FR data 
-                    % for this epoch, then all other traj measures will
-                    % exist.
-                    trajFR{1,e} = [trajFR{1,e}; nrn.eTrajFR{1,e}];
-                    trajSC{1,e} = [trajSC{1,e}; nrn.eTrajCoverage{1,e}];
-                    trajPk{1,e} = [trajPk{1,e}; nrn.eTrajFRPeak{1,e}];
-                    trajisPC{1,e} = [trajisPC{1,e}; nrn.eTrajisPC{1,e}];
-                    chcIdx{1,e} = [chcIdx{1,e}; nrn.eChoiceSelectivityIdx(1,e)];
-                    eChcIdx = [eChcIdx; nrn.eChoiceSelectivityIdx];
-                    
-                    % if strcmp(nrn.LMRVtype,cellType)
-                    %     chcIdxBehLMRV = [chcIdxBehLMRV; nrn.eChoiceSelectivityIdx];
-                    % end
-                end
-            end
+    for e = behEpochs % Loops through all epochs
 
+        for n = 1:size(C_nrninfo{1,r},1)
+        
+            nrn = C_nrninfo{1,r}{n,1};
+            
+            if strcmp(nrn.area,area) && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,cellType)
+    
+                trajFR{1,e} = [trajFR{1,e}; nrn.eTrajFR{1,e}];
+                trajSC{1,e} = [trajSC{1,e}; nrn.eTrajCoverage{1,e}];
+                trajPk{1,e} = [trajPk{1,e}; nrn.eTrajFRPeak{1,e}];
+                trajisPC{1,e} = [trajisPC{1,e}; nrn.eTrajisPC{1,e}];
+                chcIdx{1,e} = [chcIdx{1,e}; nrn.eChoiceSelectivityIdx(1,e)];
+
+            else
+                trajFR{1,e} = [trajFR{1,e}; NaN(1,4)];
+                trajSC{1,e} = [trajSC{1,e}; NaN(1,4)];
+                trajPk{1,e} = [trajPk{1,e}; NaN(1,4)];
+                trajisPC{1,e} = [trajisPC{1,e}; NaN(1,4)];
+                chcIdx{1,e} = [chcIdx{1,e}; NaN];
+      
+            end
         end
     end
-    allNrnChc = [allNrnChc; mean(abs(eChcIdx),2,'omitnan')];
     
     
     % % if ~isempty(chcIdxBehLMRV)
@@ -96,7 +93,78 @@ for r = 1:size(C_nrninfo,2)
 
 end
 
+selMat = [chcIdx{:}];
+goodRows = ~all(isnan(selMat),2); % Rows with at least one non-NaN value
+selMat = selMat(goodRows,:);
 
-% Analyze the distribution of cells based on selectivity
+% % Analyze the distribution of cells based on selectivity
+% figure;
+% h = histogram(mean(selMat,2,'omitnan'),NumBins=round(2*sqrt(numel(mean(selMat,2,'omitnan')))));
+% h.FaceColor=[0.4,0.4,0.4];
+% title(sprintf("%s Cells %s Mean Selectivity Across Epochs",cellType,area))
+% ylabel("Num Cells")
+% xlabel(" Mean Selectivity Index")
+% xlim([-2,2])
+
+% Same plot but for abs of selectivity indices before averaging.
 figure;
-histogram(allNrnChc)
+h = histogram(mean(abs(selMat),2,'omitnan'),NumBins=round(3*sqrt(numel(mean(selMat,2,'omitnan')))));
+h.FaceColor="cyan";%[0.4,0.4,0.4];
+title(sprintf("%s Cells %s Mean Selectivity Across Epochs",cellType,area))
+ylabel("Num Cells")
+xlabel(" Mean |Selectivity Index|")
+xlim([0,2])
+
+
+%% Compare choice selectivity to rate in subsequent sleep states for single epoch pairs
+
+
+cellType = "All";
+area = "CA1";
+
+stateNames = C_combstates{1,1}{1,1}.stateNames;
+stateColors = {[4,37,204]/204, [230,10,2]/230, [133,28,252]/252, [71,255,20]/255, [20,255,255]/255};
+for s = 1:numel(stateNames)
+
+    seFRs = cell(size(C_nrninfo)); % state and epoch FRs
+    eSelIdx = cell(size(C_nrninfo));
+
+    tl = tiledlayout('flow');
+    ylabel(tl,sprintf("Subsequent %s Firing Rate (Hz)",stateNames{s}))
+    xlabel(tl,"On-track Choice Selectivity Index")
+    title(tl, sprintf("%s %s vs Selectivity For All Individual Epochs",area,stateNames{s}))
+    
+
+    for r = 1:size(C_nrninfo,2)
+
+        nexttile
+        hold on;
+        title(sprintf("%s",loadRats{r}))
+        xline(0,'--k')
+    
+        for n = 1:size(C_nrninfo{1,r},1)
+    
+            nrn = C_nrninfo{1,r}{n,1};
+            
+            if strcmp(nrn.area,area) && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,cellType)
+                
+                rates = cellfun(@(x) x(s), nrn.eStateFR)';
+                idxs = nrn.eChoiceSelectivityIdx';
+                seFRs{1,r} = [seFRs{1,r}; rates];
+                eSelIdx{1,r} = [eSelIdx{1,r}; idxs];
+    
+                plot(idxs(behEpochs),rates(restEpochs(2:end)),'o',Color=stateColors{s})
+                
+            end
+        end
+ 
+
+    end
+
+
+    pause
+
+end
+
+
+%% 

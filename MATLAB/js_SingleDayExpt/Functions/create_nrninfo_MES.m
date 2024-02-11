@@ -15,7 +15,7 @@ function [] = create_nrninfo_MES(dataDir,loadRats)
 % label_interneurons(dataDir,loadRats);
 
 %% Load data
-filetypes = {'spikes01','behavperform','linfields','linpos01'};
+filetypes = {'spikes01','behavperform','linfields','linpos01','combstates_MES'};
 
 C_alldata = load_data(dataDir,loadRats,filetypes);
 
@@ -33,11 +33,15 @@ end
 if ~any(contains(filetypes,'linpos01'))
     error("linpos01 data must be loaded to run this analysis.")
 end
+if ~any(contains(filetypes,'combstates_MES'))
+    error("combstates_MES data must be loaded to run this analysis.")
+end
 
 C_allspikes = C_alldata(spikes_idx,:);
 C_behper = C_alldata(behper_idx,:);
 C_linf = C_alldata(find(contains(filetypes,'linfields')),:);
 C_linpos = C_alldata(find(contains(filetypes,'linpos01')),:);
+C_combstates = C_alldata(find(contains(filetypes,'combstates_MES')),:);
 
 behEpochs = 2:2:17;
 restEpochs = 1:2:17;
@@ -71,6 +75,7 @@ for r = 1:size(loadRats,2)
     epochTrajPeaks = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
     epochTrajIsPC = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
     epochLinField = cell(size([C_allspikes{1,r}{1,2}{:}],2),size(C_allspikes{1,r},2));
+    epochStateFR = cell(size([C_allspikes{1,r}{1,1}{:}],2),size(C_allspikes{1,r},2));
 
     areaExist = ones(size([C_allspikes{1,r}{1,1}{:}],2),1); 
     typeExist = ones(size([C_allspikes{1,r}{1,1}{:}],2),1); % Variables to catch any animals where at least
@@ -150,6 +155,37 @@ for r = 1:size(loadRats,2)
                         end
                     end
                 end
+         
+                % Collect state FR info
+                allStateOccs = C_combstates{1,r}{1,e}.sepData;
+                stateFRs = NaN(size(allStateOccs));
+                for s = 1:size(allStateOccs,1)    
+                    stateOccs = allStateOccs{s,1};
+                    % A state must have occurances and neuron must have
+                    % spikes to calculate state FR
+                    if ~isempty(stateOccs) && isfield(C_allspikes{1,r}{1,e}{1,tet}{1,n}, 'data') && ...
+                        ~isempty(C_allspikes{1,r}{1,e}{1,tet}{1,n}.data)
+                        
+                        spikes = C_allspikes{1,r}{1,e}{1,tet}{1,n}.data(:,1);
+                        % Holds the number of spikes for a given neuron
+                        % that occur during each state occurrance.
+                        numSpikesInOcc = zeros(size(stateOccs,1),1);
+                        % Loop through occurances of the state,
+                        % counting the number of spikes that fall into
+                        % each occurrance.
+                        for o = 1:size(stateOccs,1)
+                            % spike times greater than state start time and less
+                            % than state end time.
+                            isInOcc = (stateOccs(o,1) <= spikes) & (stateOccs(o,2) > spikes);
+                            numSpikesInOcc(o,1) = sum(isInOcc);
+                        end
+                        spikeSum = sum(numSpikesInOcc);
+                        stateDur = sum(stateOccs(:,2) - stateOccs(:,1)); % total duration of state
+                        stateFRs(s,1) = spikeSum/stateDur;
+                    end
+                end
+                epochStateFR{nrnCount,e} = stateFRs;
+
 
                 nrnCount = nrnCount + 1;
             end
@@ -316,6 +352,9 @@ for r = 1:size(loadRats,2)
         end
         
 
+        % Assigning state-related measures
+        S_nrn.stateNames = C_combstates{1,r}{1,1}.stateNames; % Should be the same for all rats/epochs
+        S_nrn.eStateFR = epochStateFR(nrn,:);
 
 
         nrninfo_MES{1,1}{nrn,1} = S_nrn; % Store with other cells
