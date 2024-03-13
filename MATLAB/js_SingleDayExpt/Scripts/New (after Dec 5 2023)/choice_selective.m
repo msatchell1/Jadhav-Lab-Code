@@ -168,3 +168,19 @@ end
 
 
 %% 
+dtvals = -100 : 1 : 100;
+ypos = exp(-abs(dtvals)/20);
+yneg = -exp(-abs(dtvals)/20);
+figure;
+hold on
+plot(dtvals(dtvals>=0),ypos(dtvals>=0),Color=[118, 9, 173]/173)
+plot(dtvals(dtvals<=0),yneg(dtvals<=0),Color=[118, 9, 173]/173)
+
+plot(dtvals(dtvals>=0),0.5*ypos(dtvals>=0),Color=[4, 110, 15]/110)
+plot(dtvals(dtvals<=0),0.5*yneg(dtvals<=0),Color=[4, 110, 15]/110)
+
+ylabel("Norm Synaptic Change")
+xlabel("Spike time post - pre (ms)")
+xline(0,'--k')
+yline(0,'--k')
+legend(["awake, N2"," ", "N3"])
