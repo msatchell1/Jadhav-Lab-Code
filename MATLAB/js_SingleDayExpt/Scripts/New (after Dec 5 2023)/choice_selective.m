@@ -40,7 +40,7 @@ brainAreas = {'CA1','PFC'};
 % smoothed occupancy, col 7 smoothed spike count.
 
 
-cellType = "beh-LMRV";
+cellType = "All"; % Can be commented out below.
 area = "PFC";
 % Combining data from all rats in the below arrays:
 trajFR = cell(size(C_combstates{1,1})); % Firing rates on all trajectories for all epochs and cells
@@ -58,7 +58,7 @@ for r = 1:size(C_nrninfo,2)
         
             nrn = C_nrninfo{1,r}{n,1};
             
-            if strcmp(nrn.area,area) && strcmp(nrn.type,"Pyr") && strcmp(nrn.LMRVtype,cellType)
+            if strcmp(nrn.area,area) && strcmp(nrn.type,"Pyr") %&& strcmp(nrn.LMRVtype,cellType) % Comment out to include all LMRV types
     
                 trajFR{1,e} = [trajFR{1,e}; nrn.eTrajFR{1,e}];
                 trajSC{1,e} = [trajSC{1,e}; nrn.eTrajCoverage{1,e}];
