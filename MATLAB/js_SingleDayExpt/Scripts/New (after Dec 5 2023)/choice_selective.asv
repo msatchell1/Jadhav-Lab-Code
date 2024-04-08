@@ -28,26 +28,22 @@ restEpochs = 1:2:17;
 brainAreas = {'CA1','PFC'};
 
 %% Plot the occupancy normalized firing rate in a way 
-% figure;
-% tl = tiledlayout(2,4);
-% lgdExist = 0;
-% Need a loop over cells
-%   Then a loop over epochs
-    % nexttile
-    % hold on;
-    % plot(ctrRData(:,1),ctrRData(:,5),'r')
-    % plot(ctrLData(:,1),ctrLData(:,5),'b')
-    % plot(ctrRData(:,1),ctrRData(:,5)-ctrLData(:,5),Color=[0.7,0.7,0.7])
-    % yline(0,'--k')
-    % plot(linDist(ctrOutRSpkData(:,7)),rand(size(ctrOutRSpkData))*3-5,'.r')
-    % plot(linDist(ctrOutLSpkData(:,7)),rand(size(ctrOutLSpkData))*3-8,'.b')
-    % xlabel("Linearized Distance (cm)")
-    % title(sprintf("%s nrn %d Epoch %d \n selIdx2 = %.2f, numSpikes = %d", ...
-    %     S_nrn.area,S_nrn.ID,e,selIdx2,numel(ctrOutLSpkData)+numel(ctrOutRSpkData)))
-    % if ~lgdExist
-    %     legend("Right Trajs","Left Trajs","R-L",Location="best")
-    %     lgdExist = 1;
-    % end
+
+% nexttile
+% hold on;
+% plot(ctrRData(:,1),ctrRData(:,5),'r')
+% plot(ctrLData(:,1),ctrLData(:,5),'b')
+% plot(ctrRData(:,1),ctrRData(:,5)-ctrLData(:,5),Color=[0.7,0.7,0.7])
+% yline(0,'--k')
+% plot(linDist(ctrOutRSpkData(:,7)),rand(size(ctrOutRSpkData))*3-5,'.r')
+% plot(linDist(ctrOutLSpkData(:,7)),rand(size(ctrOutLSpkData))*3-8,'.b')
+% xlabel("Linearized Distance (cm)")
+% title(sprintf("%s nrn %d Epoch %d \n selIdx2 = %.2f, numSpikes = %d", ...
+%     S_nrn.area,S_nrn.ID,e,selIdx2,numel(ctrOutLSpkData)+numel(ctrOutRSpkData)))
+% if ~lgdExist
+%     legend("Right Trajs","Left Trajs","R-L",Location="best")
+%     lgdExist = 1;
+% end
 
 %% Plot choice selectivity across epochs
 
