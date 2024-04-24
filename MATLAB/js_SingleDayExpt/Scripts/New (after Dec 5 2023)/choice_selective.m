@@ -27,27 +27,68 @@ behEpochs = 2:2:17;
 restEpochs = 1:2:17;
 brainAreas = {'CA1','PFC'};
 
-%% Plot the occupancy normalized firing rate in a way 
-% figure;
-% tl = tiledlayout(2,4);
-% lgdExist = 0;
-% Need a loop over cells
-%   Then a loop over epochs
-    % nexttile
-    % hold on;
-    % plot(ctrRData(:,1),ctrRData(:,5),'r')
-    % plot(ctrLData(:,1),ctrLData(:,5),'b')
-    % plot(ctrRData(:,1),ctrRData(:,5)-ctrLData(:,5),Color=[0.7,0.7,0.7])
-    % yline(0,'--k')
-    % plot(linDist(ctrOutRSpkData(:,7)),rand(size(ctrOutRSpkData))*3-5,'.r')
-    % plot(linDist(ctrOutLSpkData(:,7)),rand(size(ctrOutLSpkData))*3-8,'.b')
-    % xlabel("Linearized Distance (cm)")
-    % title(sprintf("%s nrn %d Epoch %d \n selIdx2 = %.2f, numSpikes = %d", ...
-    %     S_nrn.area,S_nrn.ID,e,selIdx2,numel(ctrOutLSpkData)+numel(ctrOutRSpkData)))
-    % if ~lgdExist
-    %     legend("Right Trajs","Left Trajs","R-L",Location="best")
-    %     lgdExist = 1;
-    % end
+%% Plot the occupancy normalized firing rate for each cell across epochs
+
+% There are four columns in ech epoch of linfields representing the four W-track
+% trajectories:
+% Col 1: out right, col 2: in right, col 3: out left, col 4: in left.
+% Inside each trajectory lies 7 columns of data:
+% Col 1 is the distance in cm along that linearized
+% trajectory, col 2 occupancy, col 3 spike count, col 4 occupancy normalized
+% firing rate, col 5 smoothed occupancy normalized firing rate, col 6
+% smoothed occupancy, col 7 smoothed spike count.
+
+area = "PFC";
+type = "Pyr";
+
+
+for r = 1:size(C_nrninfo,2)
+
+    for n = 1:size(C_nrninfo{1,r},1)
+        
+        nrn = C_nrninfo{1,r}{n,1};
+
+        if strcmp(nrn.area,area) && strcmp(nrn.type,type)
+
+            figure;
+            tl = tiledlayout(2,4);
+            lgdExist = 0;
+            title(tl, sprintf("%s %s %s",loadRats{r},area,type))
+
+            for e = behEpochs
+
+                if ~isempty(nrn.eTrajLinField{e})
+
+                    epochData = nrn.eTrajLinField{e};
+                    spikeCountTrajs = [sum(epochData{1}(:,3)),sum(epochData{2}(:,3)),sum(epochData{3}(:,3)),sum(epochData{4}(:,3))];
+                    
+                    nexttile
+                    hold on;
+                    plot(epochData{1}(:,1), epochData{1}(:,5),'r')
+                    plot(epochData{2}(:,1), epochData{2}(:,5),'r--')
+                    plot(epochData{3}(:,1), epochData{3}(:,5),'b')
+                    plot(epochData{4}(:,1), epochData{4}(:,5),'b--')
+
+                    % plot(ctrRData(:,1),ctrRData(:,5)-ctrLData(:,5),Color=[0.7,0.7,0.7])
+                    % yline(0,'--k')
+                    % plot(linDist(ctrOutRSpkData(:,7)),rand(size(ctrOutRSpkData))*3-5,'.r')
+                    % plot(linDist(ctrOutLSpkData(:,7)),rand(size(ctrOutLSpkData))*3-8,'.b')
+                    xlabel("Linearized Distance (cm)")
+                    ylabel("Occ Norm Firing Rate")
+                    title(sprintf("nrn %d Epoch %d \n Spike Count %s",nrn.ID,e,num2str(spikeCountTrajs)))
+                    if ~lgdExist
+                        legend("out R","in R","out L","in L",Location="best")
+                        lgdExist = 1;
+                    end
+                else % If no data for that epoch
+                    nexttile
+                end
+            end
+            pause
+            close all
+        end
+    end
+end
 
 %% Plot choice selectivity across epochs
 
